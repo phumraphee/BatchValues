@@ -1,0 +1,37 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$isItems = ($resourceType ?? 'items') === 'items';
+?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('What to do'); ?></strong>
+    <label><input type="radio" name="thumb_action" value="set" checked> <?php echo $translate('Use the image below as the thumbnail'); ?></label>
+    <label><input type="radio" name="thumb_action" value="remove"> <?php echo $translate('Remove the thumbnail (the image made from the media is shown again)'); ?></label>
+</div>
+<div class="bv-checks">
+    <strong><?php echo $translate('Only for those that… (none ticked: all)'); ?></strong>
+    <label><input type="checkbox" name="only_no_thumbnail" value="1"> <?php echo $translate('have no thumbnail yet'); ?></label>
+    <label><input type="checkbox" name="only_has_thumbnail" value="1"> <?php echo $translate('have a thumbnail already'); ?></label>
+    <?php if ($isItems): ?>
+    <label><input type="checkbox" name="only_no_media" value="1"> <?php echo $translate('have no media (no image of their own)'); ?></label>
+    <label><input type="checkbox" name="only_has_media" value="1"> <?php echo $translate('have media'); ?></label>
+    <?php endif; ?>
+    <label data-switch-show="thumb_action=remove"><input type="checkbox" name="only_this" value="1"> <?php echo $translate('have the image chosen below as thumbnail (remove only that one)'); ?></label>
+</div>
+<?php if (!$assets): ?>
+    <p class="bv-note"><?php echo sprintf($translate('There is no image yet. Upload one in %s first.'), $this->hyperlink($translate('Assets'), $this->url('admin/default', ['controller' => 'asset']), ['target' => '_blank'])); ?></p>
+<?php else: ?>
+    <div class="bv-filter"><input type="search" class="bv-asset-filter" placeholder="<?php echo $escapeAttr($translate('Filter images by name…')); ?>"></div>
+    <div class="bv-assets">
+    <?php foreach ($assets as $asset): ?>
+        <label class="bv-asset" data-name="<?php echo $escapeAttr(mb_strtolower($asset['name'])); ?>">
+            <input type="radio" name="asset" value="<?php echo (int) $asset['id']; ?>">
+            <?php if (strpos((string) $asset['media_type'], 'image/') === 0): ?><img src="<?php echo $escapeAttr($asset['url']); ?>" alt="" loading="lazy"><?php endif; ?>
+            <span><?php echo $escape($asset['name']); ?></span>
+            <?php if (!empty($thumbnailCounts[$asset['id']])): ?><span class="bv-muted"><?php echo sprintf($translate('thumbnail of %d selected'), $thumbnailCounts[$asset['id']]); ?></span><?php endif; ?>
+        </label>
+    <?php endforeach; ?>
+    </div>
+    <p class="bv-muted"><?php echo sprintf($translate('Images come from %s (the latest 500).'), $this->hyperlink($translate('Assets'), $this->url('admin/default', ['controller' => 'asset']), ['target' => '_blank'])); ?></p>
+<?php endif; ?>

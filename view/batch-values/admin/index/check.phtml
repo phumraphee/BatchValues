@@ -1,0 +1,75 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var string $token
+ * @var string $resourceType
+ * @var int $count
+ * @var array $mismatches
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$bv = $this->plugin('batchValuesRender');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-check-page');
+$typeLabel = mb_strtolower($translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][0]));
+$back = $this->url('admin/batch-values', ['action' => 'configure'], ['query' => ['token' => $token]]);
+?>
+<?php echo $this->pageTitle($translate('Check data types'), 1, $translate('Batch Values')); ?>
+
+<nav class="bv-breadcrumbs">
+    <?php echo $this->hyperlink($translate('Batch Values'), $this->url('admin/batch-values')); ?> ›
+    <?php echo $this->hyperlink($translate('2. What to do'), $back); ?> ›
+    <span><?php echo $translate('Check data types'); ?></span>
+</nav>
+
+<p class="bv-help"><?php echo sprintf($translate('Values of the %1$d selected %2$s whose data type is not one their resource template sets for the field. For example a keyword typed as plain text where the template wants a term of a vocabulary. Nothing is changed here.'), $count, $escape($typeLabel)); ?></p>
+<p class="bv-help"><?php echo $translate('Some may be right on purpose. Open “See the values” to judge. “Fix” takes only the items that hold these values, ticks these values, and opens the conversion: untick the ones to keep, then check the preview before anything is written.'); ?></p>
+
+<?php if (!$mismatches): ?>
+<p class="bv-note"><?php echo $translate('Every value has a data type its template accepts (fields a template does not restrict are not counted).'); ?></p>
+<?php else: ?>
+<?php echo $bv->peekAssets(); ?>
+<?php foreach ($mismatches as $propertyId => $m): ?>
+<section class="bv-check-field">
+    <h3><?php echo $escape($m['label']); ?> <span class="bv-muted"><?php echo $escape($m['term']); ?></span></h3>
+    <?php foreach ($m['templates'] as $templateId => $t): ?>
+    <div class="bv-check-group">
+        <div class="bv-check-head">
+            <div>
+                <strong><?php echo $escape($t['label']); ?></strong> ·
+                <?php echo $translate('the template wants'); ?> <em><?php echo $escape(implode(', ', array_map([$bv, 'typeLabel'], $t['expected']))); ?></em>
+                <div>
+                <?php foreach ($t['found'] as $type => $n): ?>
+                    <span class="bv-flag"><?php echo $escape($bv->typeLabel($type)); ?></span> <?php echo sprintf($translate('%1$d values on %2$d %3$s'), $n['values'], $n['resources'], $escape($typeLabel)); ?>
+                    <?php echo $this->hyperlink($translate('Fix these'), $this->url('admin/batch-values', ['action' => 'check-fix'], ['query' => ['token' => $token, 'property' => $propertyId, 'template' => $templateId, 'types' => [$type]]]), ['class' => 'button bv-small-button']); ?><br>
+                <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <details>
+            <summary><?php echo sprintf($translate('See the values (%d)'), $t['sample']['total']); ?></summary>
+            <table class="tablesaw bv-table" data-peek-list data-tablesaw-mode="stack">
+                <thead><tr><th><?php echo $escape(ucfirst($typeLabel)); ?></th><th><?php echo $translate('Value'); ?></th><th><?php echo $translate('Data type'); ?></th></tr></thead>
+                <tbody>
+                <?php $thumbs = $bv->thumbs(array_column($t['sample']['rows'], 'resource_id'), $resourceType); ?>
+                <?php foreach ($t['sample']['rows'] as $row): ?>
+                    <tr>
+                        <td><?php echo $bv->resourceLink((int) $row['resource_id'], $row['title'], $resourceType, $thumbs); ?></td>
+                        <td><?php echo $bv->valueById((int) $row['id']); ?><?php echo $row['is_public'] ? '' : ' <span class="bv-flag bv-flag-private">' . $escape($translate('Private')) . '</span>'; ?></td>
+                        <td><?php echo $escape($bv->typeLabel($row['type'])); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php if ($t['sample']['total'] > count($t['sample']['rows'])): ?>
+            <p class="bv-muted"><?php echo sprintf($translate('The first %1$d of %2$d. “Fix” lists them all.'), count($t['sample']['rows']), $t['sample']['total']); ?></p>
+            <?php endif; ?>
+        </details>
+    </div>
+    <?php endforeach; ?>
+</section>
+<?php endforeach; ?>
+<?php endif; ?>
+
+<div class="bv-actions"><?php echo $this->hyperlink($translate('Back'), $back, ['class' => 'button']); ?></div>

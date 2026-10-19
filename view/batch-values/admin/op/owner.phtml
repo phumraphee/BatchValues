@@ -1,0 +1,20 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+// The e-mail address is only shown where two users have the same name.
+$sameName = [];
+foreach ($users as $u) {
+    $sameName[$u['name']] = isset($sameName[$u['name']]);
+}
+?>
+<div class="field">
+    <div class="field-meta"><label for="bv-owner"><?php echo $translate('New owner'); ?></label></div>
+    <div class="inputs">
+        <select name="owner" id="bv-owner" class="chosen-select">
+            <option value=""></option>
+            <option value="none"><?php echo $translate('No owner'); ?></option>
+            <?php foreach ($users as $u): ?><option value="<?php echo (int) $u['id']; ?>"><?php echo $escape(empty($sameName[$u['name']]) ? $u['name'] : $u['name'] . ' <' . $u['email'] . '>'); ?></option><?php endforeach; ?>
+        </select>
+    </div>
+</div>

@@ -1,0 +1,36 @@
+<?php
+$translate = $this->plugin('translate');
+// "Fix" of the duplicates check: only that option ticked.
+// "Fix" of the checks: only the options found (comma separated).
+$only = isset($presetOnly) ? array_filter(explode(',', (string) $presetOnly)) : [];
+$on = function (string $name, bool $default) use ($only) {
+    return (!$only ? $default : in_array($name, $only, true)) ? ' checked' : '';
+};
+?>
+<div class="bv-checks bv-checks-examples">
+    <label><input type="checkbox" name="trim" value="1"<?php echo $on('trim', true); ?>> <?php echo $translate('Spaces at the start and end'); ?> <span class="bv-example-inline">“ Bangkok ” → “Bangkok”</span></label>
+    <label><input type="checkbox" name="duplicates" value="1"<?php echo $on('duplicates', true); ?>> <?php echo $translate('The same value entered twice in one item: keep one'); ?> <span class="bv-example-inline">Bangkok, Bangkok → Bangkok</span></label>
+    <?php if (!empty($presetKeepIds)): ?>
+    <input type="hidden" name="keep_ids" value="<?php echo implode(',', array_map('intval', $presetKeepIds)); ?>">
+    <div class="bv-sub-choice bv-note"><?php echo sprintf($translate('%d copies were chosen one by one on the check page: those stay. For the other values entered twice:'), count($presetKeepIds)); ?></div>
+    <?php endif; ?>
+    <div class="bv-sub-choice bv-radios">
+        <?php echo $translate('Which copy stays:'); ?>
+        <label><input type="radio" name="keep_copy" value="first"<?php echo ($presetKeepCopy ?? 'first') === 'first' ? ' checked' : ''; ?>> <?php echo $translate('the first one'); ?> <span class="bv-example-inline">A, B, A → A, B</span></label>
+        <label><input type="radio" name="keep_copy" value="last"<?php echo ($presetKeepCopy ?? 'first') === 'last' ? ' checked' : ''; ?>> <?php echo $translate('the last one'); ?> <span class="bv-example-inline">A, B, A → B, A</span></label>
+    </div>
+    <label><input type="checkbox" name="empty" value="1"<?php echo $on('empty', true); ?>> <?php echo $translate('Empty values (only spaces)'); ?> <span class="bv-example-inline">“ ” → removed</span></label>
+    <label><input type="checkbox" name="collapse" value="1"<?php echo $on('collapse', false); ?>> <?php echo $translate('Double spaces inside the text'); ?> <span class="bv-example-inline">“New&nbsp;&nbsp;York” → “New York”</span></label>
+    <label><input type="checkbox" name="invisible" value="1"<?php echo $on('invisible', false); ?>> <?php echo $translate('Invisible characters: zero-width space (ZWSP), byte order mark (BOM), word joiner (WJ)'); ?> <span class="bv-example-inline"><?php echo $translate('often pasted from Word or websites'); ?></span></label>
+    <label><input type="checkbox" name="nbsp" value="1"<?php echo $on('nbsp', false); ?>> <?php echo $translate('Non-breaking spaces (NBSP) into normal spaces'); ?> <span class="bv-example-inline"><?php echo $translate('looks like a space, but keeps the two words on one line'); ?></span></label>
+    <label><input type="checkbox" name="duplicates_case" value="1"<?php echo $on('duplicates_case', false); ?>> <?php echo $translate('The same value twice, even when upper and lower case differ: keep the first'); ?> <span class="bv-example-inline">Bangkok, bangkok → Bangkok</span></label>
+    <label><input type="checkbox" name="mojibake" value="1"<?php echo $on('mojibake', false); ?>> <?php echo $translate('Garbled characters from a wrong import (text read with the wrong encoding)'); ?> <span class="bv-example-inline">“CafÃ©” → “Café”</span></label>
+</div>
+<details class="bv-technical"<?php echo array_intersect($only, ['resource_type', 'nulls']) ? ' open' : ''; ?>>
+    <summary><?php echo $translate('Technical fixes (not visible on the site)'); ?></summary>
+    <div class="bv-checks">
+        <label><input type="checkbox" name="resource_type" value="1"<?php echo $on('resource_type', false); ?>> <?php echo $translate('Linked resources saved with the general data type “Resource”: use Item, Item set or Media, as the linked resource is (when the template allows it)'); ?></label>
+        <label><input type="checkbox" name="nulls" value="1"<?php echo $on('nulls', false); ?>> <?php echo $translate('Language (or text, URL) stored as an empty text “” instead of “none”: store “none”, as Omeka does. Nothing changes on the site.'); ?></label>
+    </div>
+</details>
+<p class="bv-muted"><?php echo $translate('For every value of this property. The same value twice means same text, data type, language and visibility; a public and a private copy are kept. When one copy has an annotation, that one is kept. The preview shows each field in its order, with the copy that goes struck out.'); ?></p>

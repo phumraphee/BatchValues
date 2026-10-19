@@ -1,0 +1,11 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+?>
+<h4><?php echo $translate('1. Values to replace'); ?></h4>
+<?php echo $this->partial('common/bv-picker', ['allProperties' => $allProperties ?? false, 'matchTypes' => $matchTypes ?? [], 'presetTypes' => $presetTypes ?? [], 'distinct' => $distinct, 'required' => [],
+    'pickerHelp' => $translate('Check the values to replace — for example the several ways one value was written.')]); ?>
+<h4><?php echo $translate('2. The new value'); ?></h4>
+<p class="bv-help"><?php echo $translate('Typed as each template wants. A replaced value keeps its position, visibility and annotation. Where a resource already has the new value, the old one is removed instead of making a duplicate.'); ?></p>
+<?php echo $this->partial('common/bv-typed-groups', ['groups' => $groups, 'dataTypeNames' => $dataTypeNames, 'propertyId' => $property ? $property->getId() : null, 'single' => true]); ?>

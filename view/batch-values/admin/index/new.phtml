@@ -1,0 +1,101 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array $templates
+ * @var array $itemSets
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-new-page');
+?>
+<?php echo $this->pageTitle($translate('New batch'), 1, $translate('Batch Values')); ?>
+
+<nav class="bv-breadcrumbs">
+    <?php echo $this->hyperlink($translate('Batch Values'), $this->url('admin/batch-values')); ?> ›
+    <span><?php echo $translate('1. Selection'); ?></span>
+</nav>
+
+<div class="bv-steps">
+    <span class="active"><?php echo $translate('1. Selection'); ?></span>
+    <span><?php echo $translate('2. What to do'); ?></span>
+    <span><?php echo $translate('3. Preview'); ?></span>
+    <span><?php echo $translate('4. Done'); ?></span>
+</div>
+
+<div class="bv-choices">
+    <section class="bv-choice">
+        <h3><?php echo $translate('Pick them in the Items list'); ?></h3>
+        <ol class="bv-howto">
+            <li><?php echo $translate('Search, filter or browse as usual.'); ?></li>
+            <li><?php echo $translate('Tick the items — or tick none to use every item of the search.'); ?></li>
+            <li><?php echo $translate('In "Batch actions", choose "Add/remove values". This page opens at once.'); ?></li>
+        </ol>
+        <?php echo $this->hyperlink($translate('Open the Items list'), $this->url('admin/default', ['controller' => 'item', 'action' => 'browse']), ['class' => 'button']); ?>
+    </section>
+
+    <section class="bv-choice">
+        <h3><?php echo $translate('Or take every item of…'); ?></h3>
+        <form method="post" class="bv-form">
+            <input type="hidden" name="pick" value="1">
+            <div class="bv-pick">
+                <label for="bv-pick-template"><?php echo $translate('Resource template'); ?></label>
+                <select id="bv-pick-template" name="pick_template[]" multiple class="chosen-select" data-placeholder="<?php echo $escapeAttr($translate('Any template')); ?>">
+                    <?php foreach ($templates as $template): ?>
+                    <?php if (!(int) $template['items']) continue; ?>
+                    <option value="<?php echo (int) $template['id']; ?>"><?php echo $escape($template['label']); ?> (<?php echo number_format((int) $template['items']); ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="bv-pick">
+                <label for="bv-pick-item-set"><?php echo $translate('Item set'); ?></label>
+                <select id="bv-pick-item-set" name="pick_item_set[]" multiple class="chosen-select" data-placeholder="<?php echo $escapeAttr($translate('Any item set')); ?>">
+                    <?php foreach ($itemSets as $itemSet): ?>
+                    <option value="<?php echo (int) $itemSet['id']; ?>"><?php echo $escape($itemSet['title'] !== null && $itemSet['title'] !== '' ? $itemSet['title'] : $translate('[Untitled]')); ?> (<?php echo number_format((int) $itemSet['items']); ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <p class="bv-muted"><?php echo $translate('Several templates: items of any of them. A template and an item set: items that are in both.'); ?></p>
+            <div class="bv-actions"><button type="submit" class="button"><?php echo $translate('Next'); ?></button></div>
+        </form>
+    </section>
+</div>
+
+<div class="bv-check-links">
+    <strong><?php echo $translate('Check the whole archive'); ?></strong> <span class="bv-muted"><?php echo $translate('nothing is changed'); ?></span>
+    <?php foreach (['cleanup' => 'Values to clean up', 'duplicates' => 'Values entered twice', 'links' => 'Links to check', 'accession' => 'Accession numbers'] as $checkAction => $checkLabel): ?>
+    <div><?php echo $escape($translate($checkLabel)); ?>:
+        <?php foreach (\BatchValues\Stdlib\Planner::RESOURCE_TYPES as $name => $info): ?>
+        <?php echo $this->hyperlink(mb_strtolower($translate($info[0])), $this->url('admin/batch-values', ['action' => $checkAction], ['query' => ['resource_type' => $name]])); ?><?php echo $name !== array_key_last(\BatchValues\Stdlib\Planner::RESOURCE_TYPES) ? ' ·' : ''; ?>
+        <?php endforeach; ?>
+    </div>
+    <?php endforeach; ?>
+</div>
+
+<details class="bv-other">
+    <summary><?php echo $translate('Other ways: a list of ids, or the address of a search — also for item sets and media'); ?></summary>
+    <form method="post" class="bv-form">
+        <div class="field">
+            <div class="field-meta"><label for="bv-rt"><?php echo $translate('Kind of resource'); ?></label></div>
+            <div class="inputs"><select id="bv-rt" name="resource_type">
+                <?php foreach (\BatchValues\Stdlib\Planner::RESOURCE_TYPES as $name => $info): ?>
+                <option value="<?php echo $escapeAttr($name); ?>"><?php echo $escape($translate($info[0])); ?></option>
+                <?php endforeach; ?>
+            </select></div>
+        </div>
+        <div class="field">
+            <div class="field-meta"><label for="bv-ids"><?php echo $translate('Ids'); ?></label>
+                <div class="field-description"><?php echo $translate('Separated by spaces, commas or new lines — for example copied from a spreadsheet.'); ?></div>
+            </div>
+            <div class="inputs"><textarea id="bv-ids" name="ids" rows="3"></textarea></div>
+        </div>
+        <div class="field">
+            <div class="field-meta"><label for="bv-search-url"><?php echo $translate('Address of an items search'); ?></label>
+                <div class="field-description"><?php echo $translate('Copy it from the browser bar while on the Items, Item sets or Media list (the kind is taken from the address). Every result is used, not only the page shown.'); ?></div>
+            </div>
+            <div class="inputs"><input type="text" id="bv-search-url" name="search_url"></div>
+        </div>
+        <div class="bv-actions"><button type="submit" class="button"><?php echo $translate('Next'); ?></button></div>
+    </form>
+</details>

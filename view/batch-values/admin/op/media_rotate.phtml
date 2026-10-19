@@ -1,0 +1,22 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$lossless = in_array('jpegtran', $tools ?? [], true);
+?>
+<div class="bv-radios bv-inline-choice">
+    <strong><?php echo $translate('Turn them'); ?></strong>
+    <label><input type="radio" name="degrees" value="90"> <?php echo $translate('a quarter to the right (↻ 90°)'); ?></label>
+    <label><input type="radio" name="degrees" value="270"> <?php echo $translate('a quarter to the left (↺ 90°)'); ?></label>
+    <label><input type="radio" name="degrees" value="180"> <?php echo $translate('upside down (180°)'); ?></label>
+</div>
+<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds]); ?>
+<?php if (!$kinds): ?>
+<p class="bv-note"><?php echo $translate('No media of the selection is an image this module turns (JPEG, PNG, TIFF, WebP).'); ?></p>
+<?php endif; ?>
+<p class="bv-muted"><?php echo $translate('The original file itself is turned and replaced, then its thumbnails are made again. Cancel turns it back by the same amount.'); ?>
+<?php if ($lossless): ?> 
+<?php echo $translate('This server has jpegtran, so a JPEG is turned without being encoded again: the pixels stay exactly as they are (when the width or height is not a multiple of 8, the bytes of the file can differ a little, but not the pixels).'); ?>
+<?php else: ?> 
+<?php echo $translate('This server has no jpegtran, so a JPEG is encoded again by ImageMagick with the quality it was saved with: turning and turning back does not give byte-for-byte the same file. PNG, TIFF and WebP lose nothing.'); ?>
+<?php endif; ?> 
+<?php echo $translate('A file whose EXIF says it is already turned is first put straight, so what you see is what is saved. It takes a few seconds per file: large runs go to a background job.'); ?></p>

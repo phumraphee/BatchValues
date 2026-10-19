@@ -1,0 +1,10 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+?>
+<div class="bv-radios bv-inline-choice">
+    <strong><?php echo $translate('Make them'); ?></strong>
+    <label><input type="radio" name="is_public" value="1"> <?php echo $translate('Public'); ?></label>
+    <label><input type="radio" name="is_public" value="0"> <?php echo $translate('Private'); ?></label>
+</div>

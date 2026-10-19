@@ -1,0 +1,13 @@
+<?php
+$translate = $this->plugin('translate');
+?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('Order'); ?></strong>
+    <label><input type="radio" name="direction" value="asc" checked> <?php echo $translate('A → Z (1 → 9)'); ?></label>
+    <label><input type="radio" name="direction" value="desc"> <?php echo $translate('Z → A'); ?></label>
+</div>
+<div class="bv-inline-choice">
+    <label><strong><?php echo $translate('Languages first (optional)'); ?></strong> <input type="text" name="lang_first" size="12" placeholder="th, en"></label>
+    <span class="bv-muted"><?php echo $translate('Values in these languages come first, in this order, each group sorted; the others after.'); ?></span>
+</div>
+<p class="bv-muted"><?php echo $translate('By what is shown: the title of a related item, the label of a term, the text. Omeka keeps values in the order they were created, so they are taken off and put back in the new order, each with its visibility, language and annotation. Cancelling puts the old order back.'); ?></p>

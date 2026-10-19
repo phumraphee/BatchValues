@@ -1,0 +1,21 @@
+<?php
+/**
+ * "Only these kinds of media" filter.
+ *
+ * @var array $kinds media type or ingester => count
+ * @var string|null $kindsHelp
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+?>
+<?php if (!$kinds): ?>
+<p class="bv-note"><?php echo $translate('None of the selected items has media.'); ?></p>
+<?php else: ?>
+<div class="bv-checks bv-media-kinds">
+    <strong><?php echo $escape($kindsHelp ?? $translate('Only these kinds of media (none ticked: all)')); ?></strong>
+    <?php foreach ($kinds as $kind => $n): ?>
+    <label><input type="checkbox" name="media_kinds[]" value="<?php echo $escapeAttr($kind); ?>"> <?php echo $escape($kind); ?> <span class="bv-muted">(<?php echo (int) $n; ?>)</span></label>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>

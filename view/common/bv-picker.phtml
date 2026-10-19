@@ -1,0 +1,133 @@
+<?php
+/**
+ * Which values to act on: picked from the distinct values the selected
+ * resources have, all of them, or those that match a rule.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array $distinct Empty when all properties are used.
+ * @var array $required
+ * @var bool $showRequired
+ * @var bool $pickerAllDefault
+ * @var bool $allProperties
+ * @var array $matchTypes data type => count (for the "match" rule)
+ * @var string|null $pickerHelp
+ * @var bool $noAll No "All values" choice (removing everything everywhere).
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$bv = $this->plugin('batchValuesRender');
+$allProperties = !empty($allProperties);
+$types = $matchTypes ?? [];
+if (!$types) {
+    foreach ($distinct as $row) {
+        $types[$row['type']] = ($types[$row['type']] ?? 0) + $row['occurrences'];
+    }
+}
+$default = $allProperties ? (!empty($noAll) ? 'match' : 'all') : (!empty($pickerAllDefault) ? 'all' : 'list');
+// Values chosen in advance by data type ("Fix" on the data type check): the
+// list with them ticked when it is short enough to read, else the rule.
+$preset = $presetTypes ?? [];
+$maxRows = 500;
+if ($preset) {
+    $default = (!$allProperties && count($distinct) <= $maxRows) ? 'list' : 'match';
+}
+?>
+<div class="bv-picker-block" data-mode="<?php echo $escapeAttr($default); ?>">
+    <?php if (!$distinct && !$allProperties): ?>
+        <p class="bv-note"><?php echo $translate('None of the selected resources has a value for this property.'); ?></p>
+    <?php else: ?>
+    <?php if (!empty($required) && !empty($showRequired)): ?>
+    <p class="bv-note"><?php echo sprintf($translate('This property is required by: %s. An item that would be left without any value for it is skipped.'), $escape(implode(', ', $required))); ?></p>
+    <?php endif; ?>
+    <div class="bv-radios bv-mode-choice bv-pick-modes">
+        <strong><?php echo $translate('Which values'); ?></strong>
+        <?php if (!$allProperties): ?>
+        <label><input type="radio" name="pick_mode" value="list"<?php echo $default === 'list' ? ' checked' : ''; ?>> <?php echo $translate('The ones I check in the list'); ?></label>
+        <?php endif; ?>
+        <label><input type="radio" name="pick_mode" value="match"<?php echo $default === 'match' ? ' checked' : ''; ?>> <?php echo $translate('The ones that match a rule (text, data type, language, visibility)'); ?></label>
+        <?php if (empty($noAll)): ?>
+        <label><input type="radio" name="pick_mode" value="all"<?php echo $default === 'all' ? ' checked' : ''; ?>> <?php echo $allProperties ? $translate('All values of all properties') : $translate('All values of this property, whatever they are'); ?></label>
+        <?php endif; ?>
+    </div>
+
+    <div class="bv-match" data-switch-show="pick_mode=match">
+        <div class="bv-text-fields">
+            <label><strong><?php echo $translate('Contains'); ?></strong>
+                <input type="text" name="match_text" class="bv-keep-spaces" autocomplete="off">
+                <span class="bv-muted"><?php echo $translate('Empty: any text. Looks in the text and in the URL of links.'); ?></span></label>
+        </div>
+        <div class="bv-checks">
+            <label><input type="checkbox" name="match_case" value="1"> <?php echo $translate('Match case'); ?></label>
+            <label><input type="checkbox" name="match_whole" value="1"> <?php echo $translate('The whole value, not a part of it'); ?></label>
+            <label><input type="checkbox" name="match_regex" value="1"> <?php echo $translate('Regular expression (advanced)'); ?></label>
+        </div>
+        <?php if ($types): ?>
+        <div class="bv-checks">
+            <strong><?php echo $translate('Data types (none ticked: any)'); ?></strong>
+            <?php foreach ($types as $type => $n): ?>
+            <label><input type="checkbox" name="match_types[]" value="<?php echo $escapeAttr($type); ?>"<?php echo in_array($type, $preset, true) ? ' checked' : ''; ?>> <?php echo $escape($bv->typeLabel($type)); ?> <span class="bv-muted">(<?php echo (int) $n; ?>)</span></label>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        <div class="bv-inline-choice">
+            <label><strong><?php echo $translate('Language'); ?></strong>
+                <select name="match_lang">
+                    <option value="*"><?php echo $translate('any'); ?></option>
+                    <option value=""><?php echo $translate('no language'); ?></option>
+                    <?php foreach (['th', 'en', 'zh', 'fr', 'ja'] as $code): ?><option value="<?php echo $code; ?>"><?php echo $code; ?></option><?php endforeach; ?>
+                </select></label>
+            <label><strong><?php echo $translate('Visibility'); ?></strong>
+                <select name="match_visibility">
+                    <option value="any"><?php echo $translate('any'); ?></option>
+                    <option value="public"><?php echo $translate('public'); ?></option>
+                    <option value="private"><?php echo $translate('private'); ?></option>
+                </select></label>
+        </div>
+    </div>
+
+    <?php if (!$allProperties): ?>
+    <div class="bv-pick-list" data-switch-show="pick_mode=list">
+    <p class="bv-help"><?php echo $escape($pickerHelp ?? $translate('These are the values the selected resources have for this property. Check the ones to act on.')); ?></p>
+    <?php if ($preset && count($distinct) <= $maxRows): ?>
+    <p class="bv-note"><?php echo sprintf($translate('The values of the data type %s are ticked. Untick the ones that are right as they are.'), $escape(implode(', ', array_map([$bv, 'typeLabel'], $preset)))); ?></p>
+    <?php endif; ?>
+    <?php if (count($distinct) > $maxRows): ?>
+    <p class="bv-note"><?php echo sprintf($translate('%1$d different values: only the %2$d used most are listed (the filter searches these). To act on others, choose “The ones that match a rule”.'), count($distinct), $maxRows); ?></p>
+    <?php endif; ?>
+    <div class="bv-filter">
+        <label class="bv-check-all-label"><input type="checkbox" class="bv-check-all"> <?php echo $translate('Select all shown'); ?></label>
+        <input type="search" class="bv-filter-input" placeholder="<?php echo $escapeAttr($translate('Filter values…')); ?>">
+        <span class="bv-muted bv-selected-count"></span>
+    </div>
+    <table class="tablesaw bv-table bv-distinct" data-tablesaw-mode="stack">
+        <thead>
+            <tr>
+                <th><?php echo $translate('Pick'); ?></th>
+                <th><?php echo $translate('Value'); ?></th>
+                <th><?php echo $translate('Data type'); ?></th>
+                <th><?php echo $translate('Language'); ?></th>
+                <th><?php echo $translate('Visibility'); ?></th>
+                <th><?php echo $translate('Resources'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach (array_slice($distinct, 0, $maxRows) as $row): ?>
+            <tr>
+                <td><input type="checkbox" name="keys[]" value="<?php echo $escapeAttr($row['key']); ?>"<?php echo in_array($row['type'], $preset, true) ? ' checked' : ''; ?>></td>
+                <td class="bv-value-cell"><?php echo $bv->valueById($row['sample_value_id']); ?>
+                    <?php if ($row['spacing']): ?><span class="bv-flag" title="<?php echo $escapeAttr($translate('This wording has a space, tab or line break at its start or end, so it is not the same value as the one without.')); ?>"><?php echo $translate('extra space at start or end'); ?></span><?php endif; ?>
+                    <?php if ($row['annotated']): ?><span class="bv-flag bv-flag-note"><?php echo sprintf($translate('%d with an annotation'), $row['annotated']); ?></span><?php endif; ?>
+                </td>
+                <td><?php echo $escape($bv->typeLabel($row['type'])); ?></td>
+                <td><?php echo $escape((string) $row['lang']); ?></td>
+                <td><?php echo $row['is_public'] ? '<span class="bv-muted">' . $escape($translate('Public')) . '</span>' : '<span class="bv-flag bv-flag-private">' . $escape($translate('Private')) . '</span>'; ?></td>
+                <td><?php echo (int) $row['items']; ?><?php if ($row['occurrences'] > $row['items']): ?> <span class="bv-muted" title="<?php echo $escapeAttr($translate('Some items have this value more than once; all copies are affected.')); ?>">(<?php echo (int) $row['occurrences']; ?>)</span><?php endif; ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    </div>
+    <?php endif; ?>
+    <?php endif; ?>
+</div>

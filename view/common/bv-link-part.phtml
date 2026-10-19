@@ -1,0 +1,25 @@
+<?php
+/**
+ * For fields holding links (URI values): edit the label, the URL or both.
+ * Shown only when the selection has links in this property.
+ *
+ * @var array $fieldNow
+ */
+$translate = $this->plugin('translate');
+$hasLinks = false;
+foreach ($fieldNow['distinct'] ?? [] as $row) {
+    if (\BatchValues\Stdlib\Planner::isLinkType($row['type'])) {
+        $hasLinks = true;
+        break;
+    }
+}
+if (!$hasLinks) {
+    return;
+}
+?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('In links (URI values), change'); ?></strong>
+    <label><input type="radio" name="link_part" value="label" checked> <?php echo $translate('the label only'); ?></label>
+    <label><input type="radio" name="link_part" value="uri"> <?php echo $translate('the URL only'); ?></label>
+    <label><input type="radio" name="link_part" value="both"> <?php echo $translate('both'); ?></label>
+</div>

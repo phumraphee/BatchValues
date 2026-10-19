@@ -1,0 +1,70 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$core = ['literal', 'uri', 'resource:item', 'resource:itemset', 'resource:media'];
+?>
+<h4><?php echo $translate('1. Values'); ?></h4>
+<?php echo $this->partial('common/bv-picker', ['allProperties' => $allProperties ?? false, 'matchTypes' => $matchTypes ?? [], 'presetTypes' => $presetTypes ?? [], 'distinct' => $distinct, 'required' => [], 'pickerAllDefault' => true,
+    'pickerHelp' => $translate('Convert all values of the property, or only the ones you check.')]); ?>
+<h4><?php echo $translate('2. To which data type'); ?></h4>
+<div class="bv-radios bv-mode-choice">
+    <label><input type="radio" name="target_mode" value="template" checked data-target="template"> <?php echo $translate('The one the template sets for the field (values already of that type are left as they are)'); ?></label>
+    <label><input type="radio" name="target_mode" value="choose"> <?php echo $translate('This one:'); ?>
+        <select name="target_choice">
+            <?php foreach ($core as $name): ?><?php if (isset($targets[$name])): ?><option value="<?php echo $escapeAttr($name); ?>"><?php echo $escape($targets[$name]); ?></option><?php endif; ?><?php endforeach; ?>
+            <?php foreach ($targets as $name => $label): ?><?php if (!in_array($name, $core, true) && $name !== 'resource'): ?><option value="<?php echo $escapeAttr($name); ?>"><?php echo $escape($label); ?></option><?php endif; ?><?php endforeach; ?>
+        </select></label>
+    <input type="hidden" name="target" value="template">
+</div>
+<div class="bv-checks" data-switch-show="target_mode=choose">
+    <label><input type="checkbox" name="ignore_template" value="1"> <?php echo $translate('Also where the template does not allow this data type for the field'); ?></label>
+</div>
+<details class="bv-technical">
+    <summary><?php echo $translate('Options'); ?></summary>
+    <div class="bv-radios bv-mode-choice">
+        <strong><?php echo $translate('A link (URI) becomes the text'); ?></strong>
+        <label><input type="radio" name="link_text" value="label_or_uri" checked> <?php echo $translate('its label, or its address when it has no label'); ?></label>
+        <label><input type="radio" name="link_text" value="label"> <?php echo $translate('its label only'); ?></label>
+        <label><input type="radio" name="link_text" value="uri"> <?php echo $translate('its address only'); ?></label>
+        <label><input type="radio" name="link_text" value="label_uri"> <?php echo $translate('label, space, address'); ?></label>
+        <label><input type="radio" name="link_text" value="uri_label"> <?php echo $translate('address, space, label'); ?></label>
+    </div>
+    <div class="bv-checks">
+        <label><input type="checkbox" name="split_label" value="1"> <?php echo $translate('To a link: text like “http://… Label” gives the address and its label'); ?></label>
+    </div>
+    <div class="bv-inline-choice">
+        <label><strong><?php echo $translate('A linked item becomes a link (URI) to'); ?></strong>
+            <select name="uri_base">
+                <option value="api"><?php echo $translate('its address in the API'); ?></option>
+                <?php foreach ($sites as $slug => $title): ?><option value="<?php echo $escapeAttr('site:' . $slug); ?>"><?php echo $escape(sprintf($translate('its page on the site “%s”'), $title)); ?></option><?php endforeach; ?>
+            </select></label>
+    </div>
+    <div class="bv-inline-choice">
+        <label><strong><?php echo $translate('To a linked item, item set or media: find it by'); ?></strong>
+            <select name="lookup">
+                <option value="dcterms:identifier">dcterms:identifier</option>
+                <option value="o:title"><?php echo $translate('its title'); ?></option>
+                <option value="o:id"><?php echo $translate('its Omeka id (number)'); ?></option>
+                <?php foreach (($propertyOptions['template'] ?? []) as $opt): ?><?php if ($opt['term'] !== 'dcterms:identifier'): ?><option value="<?php echo $escapeAttr($opt['term']); ?>"><?php echo $escape($opt['label'] . ' — ' . $opt['term']); ?></option><?php endif; ?><?php endforeach; ?>
+            </select></label>
+        <label><?php echo $translate('using'); ?>
+            <select name="lookup_mode">
+                <option value="full"><?php echo $translate('the whole text'); ?></option>
+                <option value="basename"><?php echo $translate('the file name at the end of a path or URL'); ?></option>
+                <option value="filename"><?php echo $translate('the file name without extension'); ?></option>
+            </select></label>
+    </div>
+</details>
+<p class="bv-help"><?php echo $translate('Each value is read as text and given to the data type; a value is converted only if the result reads exactly as the text — "1961" becomes the term named 1961, never whatever has id 1961. A linked resource is used only when exactly one has the identifier (same text, same case). Spaces at the start and end are left out. Nothing is written before the preview, which shows each conversion.'); ?></p>
+<script>
+(function () {
+    var form = document.currentScript.closest('form');
+    var sync = function () {
+        var mode = form.querySelector('input[name="target_mode"]:checked').value;
+        form.querySelector('input[name="target"]').value = mode === 'template' ? 'template' : form.querySelector('select[name="target_choice"]').value;
+    };
+    form.addEventListener('change', sync);
+    sync();
+})();
+</script>

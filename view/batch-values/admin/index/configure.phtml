@@ -1,0 +1,273 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var string $token
+ * @var int $count
+ * @var array $templateCounts
+ * @var string|null $operation
+ * @var \Omeka\Entity\Property|null $property
+ * @var \Laminas\Form\Element\Csrf $csrf
+ * @var array $groups (add)
+ * @var array $dataTypeNames (add)
+ * @var array $distinct (remove)
+ * @var array $required (remove)
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$bv = $this->plugin('batchValuesRender');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->headScript()->appendFile($this->assetUrl('js/batch-values.js', 'BatchValues'));
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-configure-page');
+$propertyTerm = $property ? $property->getVocabulary()->getPrefix() . ':' . $property->getLocalName() : null;
+?>
+<?php echo $this->pageTitle($translate('New batch'), 1, $translate('Batch Values')); ?>
+
+<nav class="bv-breadcrumbs">
+    <?php echo $this->hyperlink($translate('Batch Values'), $this->url('admin/batch-values')); ?> ›
+    <?php echo $this->hyperlink($translate('1. Selection'), $this->url('admin/batch-values', ['action' => 'new'])); ?> ›
+    <span><?php echo $translate('2. What to do'); ?></span>
+</nav>
+
+<div class="bv-steps">
+    <span class="done"><?php echo $translate('1. Selection'); ?></span>
+    <span class="active"><?php echo $translate('2. What to do'); ?></span>
+    <span><?php echo $translate('3. Preview'); ?></span>
+    <span><?php echo $translate('4. Done'); ?></span>
+</div>
+
+<?php
+$typeLabel = $translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][0]);
+$typeController = \BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][1];
+$currentQuery = array_filter(['token' => $token, 'operation' => $operation ? $operation->name() : null, 'property' => $property ? $property->getId() : null]);
+$shown = count($previewItems);
+$isIds = ($state['selection']['mode'] ?? null) === 'ids';
+$openIdsUrl = ($isIds && $count <= 300)
+    ? $this->url('admin/default', ['controller' => $typeController, 'action' => 'browse'], ['query' => ['id' => $state['ids']]])
+    : null;
+?>
+<div class="bv-layout">
+<aside class="bv-aside">
+    <div class="bv-aside-head">
+        <strong><?php echo sprintf($translate('%1$d %2$s selected'), $count, $escape(mb_strtolower($typeLabel))); ?></strong>
+        <div class="bv-muted">
+        <?php
+        $parts = [];
+        foreach ($templateCounts as $tc) {
+            $parts[] = $escape($tc['label'] ?? $translate('No template')) . ' (' . (int) $tc['count'] . ')';
+        }
+        echo implode(' · ', $parts);
+        ?>
+        </div>
+        <div class="bv-aside-links">
+            <?php if (!empty($state['return'])): ?>
+            <?php echo $this->hyperlink('← ' . ($state['return']['label'] ?? $translate('Back')), $state['return']['url']); ?><br>
+            <?php endif; ?>
+            <?php echo $this->hyperlink(sprintf($translate('Change selection in the %s list'), $typeLabel), $browseUrl); ?> ·
+            <?php echo $this->hyperlink($translate('Start over'), $this->url('admin/batch-values', ['action' => 'new'])); ?>
+        </div>
+    </div>
+    <?php echo $bv->peekAssets(); ?>
+    <ul class="bv-aside-list" data-peek-list>
+        <?php foreach ($previewItems as $item): ?>
+        <li>
+            <a href="<?php echo $escapeAttr($item->adminUrl()); ?>" target="_blank" class="bv-aside-item" title="<?php echo $escapeAttr($item->displayTitle()); ?>"
+                data-peek-url="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => 'peek', 'id' => $item->id()], ['query' => ['resource_type' => $resourceType]])); ?>">
+                <span class="bv-thumb"><?php
+                    $thumb = $item->thumbnailDisplayUrl('square');
+                    echo $thumb ? '<img src="' . $escapeAttr($thumb) . '" alt="" loading="lazy">' : '<span class="bv-thumb-none o-icon-items" aria-hidden="true"></span>';
+                ?></span>
+                <span class="bv-aside-text">
+                    <span class="bv-thumb-title"><?php echo $escape($item->displayTitle()); ?></span>
+                    <span class="bv-muted">#<?php echo (int) $item->id(); ?><?php
+                        $rt = $item->resourceTemplate();
+                        echo ($rt && count($templateCounts) > 1) ? ' · ' . $escape($rt->label()) : '';
+                    ?></span>
+                </span>
+            </a>
+            <?php if ($count > 1): ?>
+            <a class="bv-exclude" href="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => 'configure'], ['query' => $currentQuery + ['exclude' => $item->id()]])); ?>"
+                title="<?php echo $escapeAttr($translate('Take it out of the selection')); ?>" aria-label="<?php echo $escapeAttr($translate('Take it out of the selection')); ?>">&times;</a>
+            <?php endif; ?>
+        </li>
+        <?php endforeach; ?>
+    </ul>
+    <?php if ($shown < $count || $openIdsUrl || !empty($state['selection']['excluded'])): ?>
+    <div class="bv-aside-foot bv-muted">
+        <?php if ($shown < $count): ?><div><?php echo sprintf($translate('First %1$d of %2$d shown.'), $shown, $count); ?></div><?php endif; ?>
+        <?php if ($openIdsUrl): ?>
+            <div><?php echo $this->hyperlink(sprintf($translate('Open these %1$d in the %2$s list'), $count, $typeLabel), $openIdsUrl, ['target' => '_blank']); ?></div>
+        <?php elseif (!$isIds): ?>
+            <div><?php echo $this->hyperlink(sprintf($translate('See them all in the %s list'), $typeLabel), $browseUrl, ['target' => '_blank']); ?></div>
+        <?php endif; ?>
+        <?php if (!empty($state['selection']['excluded'])): ?>
+        <div><?php echo sprintf($translate('Taken out: %s'), implode(', ', array_map(function ($id) { return '#' . (int) $id; }, $state['selection']['excluded']))); ?></div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+</aside>
+
+<div class="bv-main">
+<?php
+$needsProperty = $operation && $operation->needsProperty();
+$typeWord = mb_strtolower($translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][0]));
+$ops = \BatchValues\Stdlib\Operations::class;
+?>
+<details class="bv-choose-wrap"<?php echo empty($ready) ? ' open' : ''; ?>>
+<summary>
+    <?php if (!empty($ready)): ?>
+        <strong><?php echo $escape($translate($operation->label())); ?></strong><?php if ($property && $needsProperty): ?> · <?php echo $escape($property->getLabel()); ?><?php elseif (!empty($allProperties)): ?> · <?php echo $translate('All properties'); ?><?php endif; ?>
+        <span class="bv-muted"> — <?php echo $translate('choose another action'); ?></span>
+    <?php else: ?>
+        <strong><?php echo $translate('What do you want to do?'); ?></strong>
+    <?php endif; ?>
+</summary>
+<form method="get" class="bv-form bv-choose" action="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => 'configure'])); ?>">
+    <input type="hidden" name="token" value="<?php echo $escapeAttr($token); ?>">
+    <div class="bv-menu-search">
+        <input type="search" class="bv-menu-filter" aria-label="<?php echo $escapeAttr($translate('Find an action')); ?>"
+            placeholder="<?php echo $escapeAttr($translate('Find an action: split, spelling, language, thumbnail, PDF…')); ?>">
+        <span class="bv-muted bv-menu-none" hidden><?php echo $translate('No action matches. Try another word, or clear the box.'); ?></span>
+    </div>
+    <div class="bv-menu">
+        <?php $n = 0; foreach ($menu as $groupKey => $group): ?>
+        <?php $isOpen = $operation && isset($group['operations'][$operation->name()]); ?>
+        <details class="bv-menu-group" data-group="<?php echo $escapeAttr($groupKey); ?>"<?php echo $isOpen ? ' open' : ''; ?>>
+            <summary>
+                <span class="bv-menu-num"><?php echo ++$n; ?></span>
+                <span class="bv-menu-title"><?php echo $escape(sprintf($translate($group['title']), $typeWord)); ?></span>
+                <span class="bv-menu-sub"><?php echo $escape($translate($group['sub'])); ?></span>
+                <span class="bv-menu-count"><?php echo sprintf($translate('%d actions'), count($group['operations'])); ?></span>
+            </summary>
+            <div class="bv-menu-ops">
+            <?php foreach ($group['operations'] as $op): ?>
+            <?php $search = mb_strtolower($translate($op->label()) . ' ' . $translate($op->help()) . ' ' . $ops::example($op->name()) . ' ' . $ops::keywords($op->name()) . ' ' . $op->label()); ?>
+            <label class="bv-op<?php echo $operation === $op ? ' is-current' : ''; ?>" data-search="<?php echo $escapeAttr($search); ?>">
+                <input type="radio" name="operation" value="<?php echo $escapeAttr($op->name()); ?>" data-needs-property="<?php echo $op->needsProperty() ? '1' : '0'; ?>" data-all-properties="<?php echo $op->allowsAllProperties() ? '1' : '0'; ?>"<?php echo $operation === $op ? ' checked' : ''; ?>>
+                <span class="bv-op-text">
+                    <strong><?php echo $escape($translate($op->label())); ?></strong><?php if (!$op->reversible()): ?> <span class="bv-flag bv-flag-warn"><?php echo $translate('cannot be cancelled'); ?></span><?php endif; ?>
+                    <span class="bv-op-help"><?php echo $escape($translate($op->help())); ?></span>
+                    <?php if ($ops::example($op->name()) !== ''): ?><span class="bv-op-example"><?php echo $escape($ops::example($op->name())); ?></span><?php endif; ?>
+                </span>
+            </label>
+            <?php endforeach; ?>
+            </div>
+        </details>
+        <?php endforeach; ?>
+        <?php
+        $checks = [
+            ['check', 'Check data types', 'Values whose data type is not the one their template sets for the field, with a way to fix them.', 'Keyword typed as plain text where the template wants a term', 'datatype data type template mismatch wrong type check'],
+            ['cleanup', 'Values to clean up', 'Every field at once: spaces, empty values, values entered twice, invisible or garbled characters — what “Clean up” can fix, with examples.', '“ Bangkok ” · Bangkok, Bangkok · “CafÃ©”', 'clean cleanup spaces trim empty invisible garbled mojibake duplicates problems all fields check'],
+            ['duplicates', 'Values entered twice', 'The same value more than once in one field of one item (for example the same Related Item twice), each field shown in its order.', 'Related Item: A, B, A → A, B', 'duplicate duplicates twice double same again repeated related check dedupe'],
+            ['links', 'Links to check', 'An item linked to itself, and links that go one way only in a field that is used both ways elsewhere.', 'A → B, but B does not link back to A', 'link links related item self one way mutual reciprocal back check'],
+            ['accession', 'Accession numbers', 'Numbers of a run that were never used, values that fit no known shape, and a code written in a different case from the rest.', '1975-0084 · 1975-0090 → 0085–0089 never used', 'accession number numbers run missing gap sequence serial catalogue inventory check'],
+        ];
+        ?>
+        <details class="bv-menu-group bv-menu-checks" data-group="checks">
+            <summary>
+                <span class="bv-menu-num"><?php echo ++$n; ?></span>
+                <span class="bv-menu-title"><?php echo $translate('Check the selection'); ?></span>
+                <span class="bv-menu-sub"><?php echo $translate('Find problems first · nothing is changed'); ?></span>
+                <span class="bv-menu-count"><?php echo sprintf($translate('%d checks'), count($checks)); ?></span>
+            </summary>
+            <div class="bv-menu-ops">
+            <?php foreach ($checks as [$action, $label, $help, $example, $words]): ?>
+            <a class="bv-op bv-op-link" href="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => $action], ['query' => ['token' => $token]])); ?>"
+                data-search="<?php echo $escapeAttr(mb_strtolower($translate($label) . ' ' . $translate($help) . ' ' . $example . ' ' . $words . ' ' . $label)); ?>">
+                <span class="bv-op-text">
+                    <strong><?php echo $escape($translate($label)); ?></strong>
+                    <span class="bv-op-help"><?php echo $escape($translate($help)); ?></span>
+                    <span class="bv-op-example"><?php echo $escape($example); ?></span>
+                </span>
+            </a>
+            <?php endforeach; ?>
+            </div>
+        </details>
+    </div>
+    <div class="bv-choose-bar">
+    <div class="bv-choose-picked bv-muted"><?php echo $translate('Pick an action above.'); ?></div>
+    <div class="field bv-property-field"<?php echo $operation && !$needsProperty ? ' hidden' : ''; ?>>
+        <div class="field-meta"><label for="bv-property"><?php echo $translate('Field (property)'); ?></label></div>
+        <div class="inputs">
+            <?php echo $this->partial('common/bv-property-select', [
+                'name' => 'property',
+                'id' => 'bv-property',
+                'propertyOptions' => $propertyOptions,
+                'selectedId' => $property ? $property->getId() : (!empty($allProperties) ? 'all' : null),
+                'manyTemplates' => count($templateCounts) > 1,
+                'templateCount' => count($templateCounts),
+                'withAll' => true,
+            ]); ?>
+        </div>
+    </div>
+    <div class="bv-actions">
+        <button type="submit" class="button"><?php echo $translate('Next'); ?></button>
+    </div>
+    </div>
+</form>
+        <?php
+        // Omeka's own batch edit stays reachable from here, with the same
+        // selection, even when its "Edit selected / Edit all" are hidden.
+        $coreController = ['items' => 'Item', 'item_sets' => 'ItemSet', 'media' => 'Media'][$resourceType] ?? null;
+        $coreSync = $isIds && $count <= 500;
+        if ($coreController && $this->userIsAllowed('Omeka\Controller\Admin\\' . $coreController, $coreSync ? 'batch-edit' : 'batch-edit-all')):
+            $coreQuery = $state['selection']['browse_query'] ?? [];
+            $coreAction = $this->url('admin/default', ['controller' => $typeController, 'action' => $coreSync ? 'batch-edit' : 'batch-edit-all'], ['query' => $coreQuery ?: []]);
+            $coreSearch = $isIds ? ['id' => array_map('intval', $state['ids'])] : ($state['selection']['query'] ?? []);
+        ?>
+        <div class="bv-core-line bv-muted">
+        <?php echo $translate('Need Omeka\'s own form?'); ?>
+        <form method="post" action="<?php echo $escapeAttr($coreAction); ?>" class="bv-core-edit">
+            <?php if ($coreSync): ?>
+            <?php foreach ($state['ids'] as $coreId): ?>
+            <input type="hidden" name="resource_ids[]" value="<?php echo (int) $coreId; ?>">
+            <?php endforeach; ?>
+            <?php else: ?>
+            <input type="hidden" name="query" value="<?php echo $escapeAttr(json_encode($coreSearch)); ?>">
+            <?php endif; ?>
+            <button type="submit" class="bv-link-button" title="<?php echo $escapeAttr($translate('Same selection, in Omeka\'s own batch edit form. Changes made there are not in the Batch Values log and cannot be cancelled.')); ?>"><?php echo $escape($translate('Use Omeka\'s batch edit instead')); ?></button>
+        </form>
+        </div>
+        <?php endif; ?>
+</details>
+
+<?php if (!empty($ready)): ?>
+<form method="post" id="bv-op-form" class="bv-form disable-unsaved-warning" action="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => 'preview'])); ?>">
+    <input type="hidden" name="token" value="<?php echo $escapeAttr($token); ?>">
+    <input type="hidden" name="operation" value="<?php echo $escapeAttr($operation->name()); ?>">
+    <?php if ($property): ?><input type="hidden" name="property" value="<?php echo (int) $property->getId(); ?>"><?php elseif (!empty($allProperties)): ?><input type="hidden" name="property" value="all"><?php endif; ?>
+    <?php echo $this->formHidden($csrf); ?>
+
+    <div class="bv-op-head">
+        <h3><?php echo $escape($translate($operation->label())); ?>
+            <?php if ($needsProperty && $property): ?> — <?php echo $escape($property->getLabel()); ?> <span class="bv-muted"><?php echo $escape($propertyTerm); ?></span><?php elseif ($needsProperty && !empty($allProperties)): ?> — <?php echo $translate('All properties'); ?><?php endif; ?>
+        </h3>
+        <p><?php echo $escape($translate($operation->help())); ?>
+            <?php if (\BatchValues\Stdlib\Operations::example($operation->name()) !== ''): ?><span class="bv-op-example"><?php echo $escape(\BatchValues\Stdlib\Operations::example($operation->name())); ?></span><?php endif; ?></p>
+        <?php if (!$operation->reversible()): ?><p class="bv-note bv-warn"><?php echo $translate('This action cannot be cancelled afterwards. Check the preview carefully.'); ?></p><?php endif; ?>
+    </div>
+
+    <?php if (!empty($opVars['fieldNow'])): ?>
+    <?php echo $this->partial('common/bv-field-now', ['fieldNow' => $opVars['fieldNow'], 'typeLabel' => $typeLabel, 'withList' => empty($opVars['picker'])]); ?>
+    <?php endif; ?>
+
+    <?php if (!empty($allProperties)): ?>
+    <p class="bv-note"><?php echo $translate('All properties: the action is done field by field, on every field of the selected items. Linked items and terms are never edited as text.'); ?></p>
+    <?php endif; ?>
+    <?php echo $this->partial('batch-values/admin/op/' . $operation->name(), $opVars + [
+        'operation' => $operation,
+        'property' => $property,
+        'propertyOptions' => $propertyOptions,
+        'manyTemplates' => count($templateCounts) > 1,
+        'templateCount' => count($templateCounts),
+        'resourceType' => $resourceType,
+    ]); ?>
+
+    <div class="bv-actions">
+        <button type="submit" class="button"><?php echo $translate('Preview'); ?></button>
+        <span class="bv-muted"><?php echo $translate('Nothing is changed before you confirm on the next page.'); ?></span>
+    </div>
+</form>
+<?php endif; ?>
+</div>
+</div>

@@ -1,0 +1,63 @@
+<?php
+/**
+ * How many values each property holds, before and after.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array $stats property id => ['term', 'label', 'before', 'after', 'archive']
+ * @var array|null $now Same shape, counted today (log page).
+ * @var string $typeLabel
+ * @var string $mode "preview" or "log"
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$now = $now ?? null;
+$lower = mb_strtolower($typeLabel);
+$n = function ($v) {
+    return number_format((int) $v);
+};
+$change = function ($before, $after) use ($n) {
+    $d = $after - $before;
+    if ($d === 0) {
+        return '<strong>' . $n($after) . '</strong> <span class="bv-muted">(' . $this->translate('no change') . ')</span>';
+    }
+    return $n($before) . ' <span class="bv-arrow">→</span> <strong>' . $n($after) . '</strong> '
+        . '<span class="' . ($d > 0 ? 'bv-plus' : 'bv-minus') . '">(' . ($d > 0 ? '+' : '−') . $n(abs($d)) . ')</span>';
+};
+?>
+<div class="bv-stats">
+    <h3><?php echo $mode === 'log' ? $translate('How many values') : $translate('How many values, before → after'); ?></h3>
+    <p class="bv-muted"><?php echo $mode === 'log'
+        ? $translate('Counted when the change was previewed. The last column is counted now, as this page opens, to show whether anything changed since.')
+        : $translate('How many values each property holds before and after this change: in the selected resources, and in the whole archive.'); ?></p>
+    <table class="bv-table bv-stats-table">
+        <thead><tr>
+            <th><?php echo $translate('Property'); ?></th>
+            <th><?php echo sprintf($translate('Values in the selected %s'), $escape($lower)); ?></th>
+            <th><?php echo sprintf($translate('Values in all %s of the archive'), $escape($lower)); ?></th>
+            <?php if ($now): ?><th><?php echo $translate('In all, now'); ?></th><?php endif; ?>
+        </tr></thead>
+        <tbody>
+        <?php foreach ($stats as $pid => $st): ?>
+            <tr>
+                <td><strong><?php echo $escape($st['label']); ?></strong><div class="bv-muted"><?php echo $escape($st['term']); ?></div></td>
+                <td>
+                    <?php echo $change($st['before']['values'], $st['after']['values']); ?>
+                    <div class="bv-muted">
+                        <?php echo sprintf($translate('%1$s of them have this property'), $st['before']['resources'] === $st['after']['resources']
+                            ? $n($st['after']['resources'])
+                            : $n($st['before']['resources']) . ' → ' . $n($st['after']['resources'])); ?>
+                        · <?php echo sprintf($translate('%s different values'), $st['before']['distinct'] === $st['after']['distinct']
+                            ? $n($st['after']['distinct'])
+                            : $n($st['before']['distinct']) . ' → ' . $n($st['after']['distinct'])); ?>
+                    </div>
+                </td>
+                <td><?php echo $change($st['archive'][0], $st['archive'][1]); ?></td>
+                <?php if ($now): ?>
+                <td><?php $x = $now[$pid] ?? null; echo $x ? '<strong>' . $n($x['archive'][0]) . '</strong>'
+                    . ((int) $x['archive'][0] !== (int) $st['archive'][1] ? ' <span class="bv-flag">' . $escape($translate('changed since')) . '</span>' : '') : ''; ?></td>
+                <?php endif; ?>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>

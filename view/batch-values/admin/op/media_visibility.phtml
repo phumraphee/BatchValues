@@ -1,0 +1,10 @@
+<?php
+$translate = $this->plugin('translate');
+?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('Make the media'); ?></strong>
+    <label><input type="radio" name="media_public" value="0"> <?php echo $translate('Private (only logged-in users see them)'); ?></label>
+    <label><input type="radio" name="media_public" value="1"> <?php echo $translate('Public'); ?></label>
+</div>
+<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds]); ?>
+<p class="bv-muted"><?php echo $translate('Only the media change; the items keep their own visibility.'); ?></p>

@@ -1,0 +1,26 @@
+<?php
+$translate = $this->plugin('translate');
+?>
+<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds, 'kindsHelp' => $translate('Kinds of media to delete')]); ?>
+<?php if ($extensions): ?>
+<div class="bv-checks bv-media-kinds">
+    <strong><?php echo $translate('Or by file extension'); ?></strong>
+    <?php foreach ($extensions as $ext => $n): ?>
+    <label><input type="checkbox" name="media_extensions[]" value="<?php echo $this->escapeHtmlAttr($ext); ?>"> .<?php echo $this->escapeHtml($ext); ?> <span class="bv-muted">(<?php echo (int) $n; ?>)</span></label>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+<div class="bv-checks">
+    <label><input type="checkbox" name="keep_one" value="1" checked> <?php echo $translate('Skip an item when it would be left with no media at all'); ?></label>
+    <?php if (!empty($keepsFiles)): ?>
+    <label class="bv-danger"><input type="checkbox" name="confirm_delete" value="1"> <?php echo $translate('I understand: the media are deleted. Their files are kept aside, so Cancel can put them back.'); ?></label>
+    <?php else: ?>
+    <label class="bv-danger"><input type="checkbox" name="confirm_delete" value="1"> <?php echo $translate('I understand: the media and their files are deleted for good. This cannot be cancelled.'); ?></label>
+    <?php endif; ?>
+</div>
+<p class="bv-muted"><?php echo $translate('The preview lists every media that would be deleted.'); ?>
+<?php if (!empty($keepsFiles)): ?>
+<?php echo $translate('The log keeps their titles, file names and their own values; the file itself is put in files/batchvalues-removed/ and Cancel puts the media back with it. (Module setting: "Keep the file when a media is deleted".)'); ?>
+<?php else: ?>
+<?php echo $translate('The log keeps their titles and file names, not the files. Turn on "Keep the file when a media is deleted" in the module settings if deleting should be cancellable.'); ?>
+<?php endif; ?></p>

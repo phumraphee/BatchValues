@@ -1,0 +1,185 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var string $token
+ * @var string $resourceType
+ * @var \BatchValues\Operation\AbstractOperation $operation
+ * @var \Omeka\Entity\Property|null $property
+ * @var array $groups
+ * @var array $params
+ * @var array $display
+ * @var array $summary
+ * @var array $sample
+ * @var int $count
+ * @var array $backQuery
+ * @var int $syncLimit
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$bv = $this->plugin('batchValuesRender');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-preview-page');
+$typeLabel = $translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][0]);
+$typeController = \BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][1];
+$willChange = ($summary['total']['added'] ?? 0) + ($summary['total']['removed'] ?? 0) + ($summary['total']['changed'] ?? 0);
+$groupLabel = function ($key) use ($groups, $translate, $escape) {
+    if ($key === 'missing' || $key === null) {
+        return '';
+    }
+    if (isset($groups[$key]) && $groups[$key]['template_label'] !== null) {
+        return $escape($groups[$key]['template_label']);
+    }
+    if ($key === 'none') {
+        return '<em>' . $escape($translate('No template')) . '</em>';
+    }
+    $label = $this->api()->searchOne('resource_templates', ['id' => (int) substr($key, 1)])->getContent();
+    return $label ? $escape($label->label()) : '';
+};
+?>
+<?php echo $this->pageTitle($translate('Preview'), 1, $translate('Batch Values')); ?>
+
+<nav class="bv-breadcrumbs">
+    <?php echo $this->hyperlink($translate('Batch Values'), $this->url('admin/batch-values')); ?> ›
+    <?php echo $this->hyperlink($translate('2. What to do'), $this->url('admin/batch-values', ['action' => 'configure'], ['query' => $backQuery])); ?> ›
+    <span><?php echo $translate('3. Preview'); ?></span>
+</nav>
+
+<div class="bv-steps">
+    <span class="done"><?php echo $translate('1. Selection'); ?></span>
+    <span class="done"><?php echo $translate('2. What to do'); ?></span>
+    <span class="active"><?php echo $translate('3. Preview'); ?></span>
+    <span><?php echo $translate('4. Done'); ?></span>
+</div>
+
+<div class="bv-summary">
+    <p class="bv-big"><?php echo $bv->sentence($operation->name(), $params, $display, $property ? $property->getLabel() : (!empty($allProperties) ? $translate('All properties') : null), $typeLabel); ?>.</p>
+    <p class="bv-big2"><?php echo sprintf($translate('%1$d of the %2$d selected %3$s will change.'), $willChange, $count, $escape(mb_strtolower($typeLabel))); ?></p>
+    <ul class="bv-outcomes">
+    <?php foreach ($summary['total'] as $outcome => $n): ?>
+        <li class="bv-outcome-<?php echo $escapeAttr($outcome); ?>"><strong><?php echo (int) $n; ?></strong> <?php echo $escape($bv->outcomeLabel($outcome)); ?></li>
+    <?php endforeach; ?>
+    </ul>
+</div>
+
+<?php if ($stats): ?>
+<?php echo $this->partial('common/bv-stats', ['stats' => $stats, 'typeLabel' => $typeLabel, 'mode' => 'preview']); ?>
+<?php endif; ?>
+
+<?php if ($operation->name() === 'add'): ?>
+<h3><?php echo $translate('By template'); ?></h3>
+<table class="tablesaw bv-table" data-tablesaw-mode="stack">
+    <thead><tr>
+        <th><?php echo $translate('Template'); ?></th>
+        <th><?php echo $translate('Value to add'); ?></th>
+        <th><?php echo $translate('Result'); ?></th>
+    </tr></thead>
+    <tbody>
+    <?php foreach ($params['groups'] as $key => $group): ?>
+        <tr>
+            <td><?php echo $groupLabel($key); ?> <span class="bv-muted">(<?php echo (int) ($groups[$key]['count'] ?? 0); ?>)</span></td>
+            <td>
+                <?php if ($group['skip']): ?>
+                    <em class="bv-muted"><?php echo $translate('Nothing'); ?></em>
+                <?php else: ?>
+                    <?php foreach ($group['snapshots'] as $i => $snapshot): ?>
+                    <?php $vs = $summary['values'][$key][$group['keys'][$i] ?? ''] ?? []; ?>
+                    <div class="bv-preview-value">
+                        <?php echo $bv($snapshot); ?>
+                        <div class="bv-muted">
+                            <span class="bv-changed"><?php echo sprintf($translate('added to %d'), $vs['added'] ?? 0); ?></span>
+                            <?php if (!empty($vs['present'])): ?> · <span class="bv-outcome-skipped_duplicate"><?php echo sprintf($translate('already present on %d'), $vs['present']); ?></span><?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </td>
+            <td>
+                <?php foreach ($summary['groups'][$key] ?? [] as $outcome => $n): ?>
+                <div class="bv-outcome-<?php echo $escapeAttr($outcome); ?>"><?php echo (int) $n; ?> · <?php echo $escape($bv->outcomeLabel($outcome)); ?></div>
+                <?php endforeach; ?>
+            </td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+<?php endif; ?>
+
+<?php if (!empty($fullList)): ?>
+<details class="bv-full-list" open>
+    <summary><strong><?php echo sprintf($translate('Everything that will be done — %d %s'), $fullCount, $escape(mb_strtolower($typeLabel))); ?></strong>
+        <span class="bv-muted"><?php echo $translate('(this cannot be cancelled, so the whole list is shown)'); ?></span></summary>
+    <table class="tablesaw bv-table" data-tablesaw-mode="stack">
+        <thead><tr><th><?php echo $escape($typeLabel); ?></th><th><?php echo $translate('Change'); ?></th></tr></thead>
+        <tbody>
+        <?php foreach ($fullList as $row): ?>
+            <tr><td>#<?php echo (int) $row['id']; ?> <?php echo $escape((string) $row['title']); ?></td><td><?php echo $bv->changeHtml($row); ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php if ($fullCount > count($fullList)): ?><p class="bv-note"><?php echo sprintf($translate('Only the first %d are listed.'), count($fullList)); ?></p><?php endif; ?>
+</details>
+<?php endif; ?>
+
+<h3><?php echo $translate('Examples'); ?> <span class="bv-muted"><?php echo $translate('(up to 100 that change, then a few that are skipped)'); ?></span></h3>
+<?php echo $bv->peekAssets(); ?>
+<table class="tablesaw bv-table bv-changes" data-peek-list data-tablesaw-mode="stack">
+    <thead><tr>
+        <th class="bv-col-resource"><?php echo $escape($typeLabel); ?></th>
+        <?php if ($fieldProperties): ?>
+            <?php foreach ($fieldProperties as $pid): ?>
+            <th><?php echo $escape($stats[$pid]['label'] ?? ''); ?> <span class="bv-muted"><?php echo $escape($stats[$pid]['term'] ?? ''); ?></span>
+                <div class="bv-muted bv-legend"><?php echo $translate('the whole field, in its order'); ?></div></th>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <th><?php echo $translate('Change'); ?></th>
+        <?php endif; ?>
+    </tr></thead>
+    <tbody>
+    <?php foreach ($sample as $row): ?>
+        <tr>
+            <td>
+                <?php $g = $groupLabel($row['group'] ?? null); ?>
+                <?php echo $bv->resourceLink((int) $row['id'], $row['title'], $resourceType, [$row['id'] => $row['thumb']], $g !== '' ? ' · ' . strip_tags($g) : ''); ?>
+                <div class="bv-result bv-outcome-<?php echo $escapeAttr($row['outcome']); ?>"><?php echo $escape($bv->outcomeLabel($row['outcome'])); ?></div>
+                <?php if (!empty($row['message'])): ?><div class="bv-muted bv-result-note"><?php echo $escape($row['message']); ?></div><?php endif; ?>
+            </td>
+            <?php if ($fieldProperties): ?>
+                <?php foreach ($fieldProperties as $pid): ?>
+                <?php $allowed = ((int) $pid === ($property ? $property->getId() : 0)) ? ($groups[$row['group'] ?? '']['data_types'] ?? []) : []; ?>
+                <td><?php echo $bv->gridHtml($current[$pid][$row['id']] ?? [], $row['pairs'] ?? [], (int) $pid, ['allowed' => $allowed, 'before_label' => 'Now', 'after_label' => 'After']); ?></td>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <td><?php echo $bv->changeHtml($row, !empty($allProperties)); ?></td>
+            <?php endif; ?>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+
+<form method="post" action="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => 'apply'])); ?>" class="bv-form bv-confirm disable-unsaved-warning">
+    <input type="hidden" name="token" value="<?php echo $escapeAttr($token); ?>">
+    <?php echo $this->formHidden($csrf); ?>
+    <?php if ($willChange): ?>
+    <p class="bv-help">
+        <?php if ($operation->reversible()): ?>
+        <?php echo $translate('Everything is checked again when the run starts, so changes made meanwhile are taken into account. Every change is logged and can be cancelled later.'); ?>
+        <?php else: ?>
+        <strong class="bv-danger"><?php echo $translate('This cannot be cancelled afterwards.'); ?></strong>
+        <?php echo $translate('Everything is checked again when the run starts. Every change is logged.'); ?>
+        <?php endif; ?>
+        <?php if ($count > $syncLimit): ?>
+        <?php echo sprintf($translate('With more than %d, the run is done in the background.'), $syncLimit); ?>
+        <?php endif; ?>
+    </p>
+    <div class="bv-actions">
+        <button type="submit" class="button"><?php echo sprintf($translate('Confirm: change %d'), $willChange); ?></button>
+        <?php echo $this->hyperlink($translate('Back'), $this->url('admin/batch-values', ['action' => 'configure'], ['query' => $backQuery]), ['class' => 'button']); ?>
+    </div>
+    <?php else: ?>
+    <p class="bv-note"><?php echo $translate('Nothing would change.'); ?></p>
+    <div class="bv-actions">
+        <?php echo $this->hyperlink($translate('Back'), $this->url('admin/batch-values', ['action' => 'configure'], ['query' => $backQuery]), ['class' => 'button']); ?>
+    </div>
+    <?php endif; ?>
+</form>

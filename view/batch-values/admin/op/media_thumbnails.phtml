@@ -1,0 +1,8 @@
+<?php
+$translate = $this->plugin('translate');
+?>
+<div class="bv-checks">
+    <label><input type="checkbox" name="only_missing" value="1" checked> <?php echo $translate('Only media that have no thumbnail now'); ?></label>
+</div>
+<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds]); ?>
+<p class="bv-muted"><?php echo $translate('Only media with an uploaded file. The original file is not touched: only the small, medium and large images made from it are made again, with the current thumbnail settings of the server. This cannot be cancelled, and there is nothing to cancel. It takes a few seconds per file: large runs go to a background job.'); ?></p>

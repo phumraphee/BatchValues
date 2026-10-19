@@ -1,0 +1,32 @@
+<?php
+$translate = $this->plugin('translate');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+?>
+<?php if (!$tool): ?>
+<p class="bv-note"><?php echo $translate('This server has neither pdftoppm (poppler-utils) nor ImageMagick: PDF pages cannot be made into images here. Ask the server administrator to install poppler-utils.'); ?></p>
+<?php endif; ?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('Which PDFs'); ?></strong>
+    <label><input type="radio" name="which" value="all" checked> <?php echo $translate('Every PDF of each item'); ?></label>
+    <label><input type="radio" name="which" value="first"> <?php echo $translate('Only the first PDF of each item'); ?></label>
+    <label><input type="radio" name="which" value="last"> <?php echo $translate('Only the last PDF of each item'); ?></label>
+</div>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('Resolution'); ?></strong>
+    <label><input type="radio" name="dpi" value="100"> <?php echo $translate('100 dpi (small files, for reading on screen)'); ?></label>
+    <label><input type="radio" name="dpi" value="150" checked> <?php echo $translate('150 dpi'); ?></label>
+    <label><input type="radio" name="dpi" value="200"> <?php echo $translate('200 dpi'); ?></label>
+    <label><input type="radio" name="dpi" value="300"> <?php echo $translate('300 dpi (large files, for zooming)'); ?></label>
+</div>
+<?php if (count($tools) > 1): ?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('Program'); ?></strong>
+    <label><input type="radio" name="tool" value="auto" checked> <?php echo $translate('Automatic (pdftoppm when there is one)'); ?></label>
+    <?php foreach ($tools as $t): ?><label><input type="radio" name="tool" value="<?php echo $escapeAttr($t); ?>"> <?php echo $t === 'convert' ? 'ImageMagick' : 'pdftoppm (poppler)'; ?></label><?php endforeach; ?>
+</div>
+<?php endif; ?>
+<div class="bv-checks">
+    <label><input type="checkbox" name="skip_done" value="1" checked> <?php echo $translate('Skip a PDF whose page images are there already'); ?></label>
+</div>
+<p class="bv-example"><?php echo $translate('Example: “catalogue.pdf” (12 pages) → catalogue-p001.jpg … catalogue-p012.jpg, right after the PDF in the same item.'); ?></p>
+<p class="bv-muted"><?php echo $translate('Each image is created like an uploaded file (thumbnails, and whatever other modules do with new media), with the visibility of the PDF and no metadata; its file name says which page it is. The PDF is kept. Cancelling deletes the page images. This takes time: most runs go to a background job.'); ?></p>

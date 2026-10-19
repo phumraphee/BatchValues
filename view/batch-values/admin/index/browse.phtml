@@ -1,0 +1,69 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array $sets
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$bv = $this->plugin('batchValuesRender');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-log-page');
+?>
+<?php echo $this->pageTitle($translate('Log'), 1, $translate('Batch Values')); ?>
+
+<div id="page-actions">
+    <?php echo $this->hyperlink($translate('New batch'), $this->url('admin/batch-values', ['action' => 'new']), ['class' => 'button']); ?>
+</div>
+
+<div class="browse-controls">
+    <?php echo $this->pagination(); ?>
+</div>
+
+<?php if ($sets): ?>
+<table class="tablesaw bv-table" data-tablesaw-mode="stack">
+    <thead>
+        <tr>
+            <th><?php echo $translate('Change set'); ?></th>
+            <th><?php echo $translate('Property'); ?></th>
+            <th><?php echo $translate('Resources'); ?></th>
+            <th><?php echo $translate('Result'); ?></th>
+            <th><?php echo $translate('Status'); ?></th>
+            <th><?php echo $translate('By'); ?></th>
+            <th><?php echo $translate('Date'); ?></th>
+        </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($sets as $set): ?>
+        <tr>
+            <td>
+                <?php echo $this->hyperlink('#' . $set['id'] . ' · ' . $bv->operationLabel($set['operation']), $this->url('admin/batch-values', ['action' => 'show', 'id' => $set['id']])); ?>
+                <?php if ($set['reverses_id']): ?>
+                <div class="bv-muted"><?php echo sprintf($translate('of %s'), $this->hyperlink('#' . $set['reverses_id'], $this->url('admin/batch-values', ['action' => 'show', 'id' => $set['reverses_id']]))); ?></div>
+                <?php endif; ?>
+                <?php if (!empty($set['cancel_count'])): ?>
+                <div class="bv-muted"><?php echo $escape($translate('has cancellations')); ?></div>
+                <?php endif; ?>
+            </td>
+            <td><?php echo $escape($set['property_label'] ?: ''); ?> <div class="bv-muted"><?php echo $escape($set['property_term']); ?></div></td>
+            <?php $showUrl = function ($outcome) use ($set) { return $this->url('admin/batch-values', ['action' => 'show', 'id' => $set['id']], ['query' => ['outcome' => $outcome]]); }; ?>
+            <td><?php echo $this->hyperlink((int) $set['total'] . ' ' . mb_strtolower($translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$set['resource_type'] ?: 'items'][0] ?? 'Items')), $showUrl('all'), ['class' => 'bv-muted-link']); ?></td>
+            <td>
+                <div><?php echo $set['changed'] ? $this->hyperlink(sprintf($translate('%d changed'), $set['changed']), $showUrl('effective'), ['class' => 'bv-changed']) : '<span class="bv-muted">' . sprintf($translate('%d changed'), 0) . '</span>'; ?></div>
+                <?php if ($set['skipped']): ?><div><?php echo $this->hyperlink(sprintf($translate('%d skipped'), $set['skipped']), $showUrl('skipped'), ['class' => 'bv-muted-link']); ?></div><?php endif; ?>
+                <?php if ($set['failed']): ?><div><?php echo $this->hyperlink(sprintf($translate('%d failed'), $set['failed']), $showUrl('failed'), ['class' => 'bv-failed']); ?></div><?php endif; ?>
+            </td>
+            <td><span class="bv-status bv-status-<?php echo $escape($set['status']); ?>"><?php echo $escape($bv->statusLabel($set['status'])); ?></span></td>
+            <td><?php echo $set['owner_name'] !== null ? $escape($set['owner_name']) : '<em>' . $escape($translate('not recorded')) . '</em>'; ?>
+                <?php if ($set['owner_name'] !== null && $set['owner_id'] === null): ?><div class="bv-muted"><?php echo $escape($translate('user deleted')); ?></div><?php endif; ?>
+            </td>
+            <td><?php echo $escape($this->i18n()->dateFormat(new \DateTime($set['created']), 'medium', 'short')); ?></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+<?php else: ?>
+<div class="no-resources">
+    <p><?php echo $translate('Nothing has been changed with Batch Values yet.'); ?></p>
+    <p><?php echo $translate('Start from the items list: tick items (or none, for the whole search), then choose "Add/remove values" in the Batch actions menu. Or click "New batch".'); ?></p>
+</div>
+<?php endif; ?>

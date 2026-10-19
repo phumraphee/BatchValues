@@ -1,0 +1,14 @@
+<?php
+$translate = $this->plugin('translate');
+?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('Metadata of each new item'); ?></strong>
+    <label><input type="radio" name="title_mode" value="copy" checked> <?php echo $translate('A copy of the item’s values'); ?></label>
+    <label><input type="radio" name="title_mode" value="media_title"> <?php echo $translate('A copy of the item’s values, with the title of its media when the media has one'); ?></label>
+    <label><input type="radio" name="title_mode" value="append"> <?php echo $translate('A copy of the item’s values, plus the values of its media'); ?></label>
+    <label><input type="radio" name="title_mode" value="update"> <?php echo $translate('The item’s values, replaced by the media’s for the fields the media has'); ?></label>
+    <label><input type="radio" name="title_mode" value="replace"> <?php echo $translate('The values of its media only (the item’s when the media has none)'); ?></label>
+    <span class="bv-muted"><?php echo $translate('The media keep their own values in every case.'); ?></span>
+</div>
+<p class="bv-example"><?php echo $translate('Example: item “Letters, 1965” with 3 scans → the item keeps scan 1; two new items “Letters, 1965” get scan 2 and scan 3.'); ?></p>
+<p class="bv-muted"><?php echo $translate('Each new item gets the same template, class, visibility, owner, item sets and sites, and every value exactly as it is (data types, languages, private values, annotations). The media are moved, not copied: their files and metadata do not change. Items with one media are skipped. Cancelling moves the media back and deletes the new items (a new item that got other media since is kept).'); ?></p>

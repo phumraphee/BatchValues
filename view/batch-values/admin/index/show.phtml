@@ -1,0 +1,187 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array $set
+ * @var array $counts
+ * @var string|null $outcome
+ * @var array $changes
+ * @var int $reversible
+ * @var array $cancelSets
+ * @var array|null $reversedSet
+ * @var array $live Value rows still in the base, by id (0.8.0).
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$bv = $this->plugin('batchValuesRender');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->headScript()->appendFile($this->assetUrl('js/batch-values-show.js', 'BatchValues'));
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-show-page');
+$setUrl = function ($id, $query = []) {
+    return $this->url('admin/batch-values', ['action' => 'show', 'id' => $id], ['query' => $query]);
+};
+$running = $set['status'] === 'running';
+$typeController = \BatchValues\Stdlib\Planner::RESOURCE_TYPES[$set['resource_type'] ?: 'items'][1] ?? 'item';
+$total = max(1, (int) $set['total']);
+?>
+<?php echo $this->pageTitle(sprintf('#%d · %s', $set['id'], $bv->operationLabel($set['operation'])), 1, $translate('Batch Values')); ?>
+
+<nav class="bv-breadcrumbs">
+    <?php echo $this->hyperlink($translate('Batch Values'), $this->url('admin/batch-values')); ?> ›
+    <span>#<?php echo (int) $set['id']; ?></span>
+</nav>
+
+<div id="page-actions">
+    <?php $opObject = $this->plugin('batchValuesRender')->operation($set['operation']); ?>
+    <?php if (!$running && $reversible && $set['operation'] !== \BatchValues\Module::FORM_EDIT && (!$opObject || $opObject->reversible())): ?>
+    <?php echo $this->hyperlink(sprintf($translate('Cancel remaining changes (%d)'), $reversible), $this->url('admin/batch-values', ['action' => 'cancel', 'id' => $set['id']]), ['class' => 'button']); ?>
+    <?php endif; ?>
+    <?php echo $this->hyperlink($translate('New batch'), $this->url('admin/batch-values', ['action' => 'new']), ['class' => 'button']); ?>
+</div>
+
+<?php $typeLabelShow = $translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$set['resource_type'] ?: 'items'][0] ?? 'Items'); ?>
+<?php if ($set['operation'] === \BatchValues\Module::FORM_EDIT): ?>
+<div class="bv-summary bv-sentence">
+    <p class="bv-big"><?php echo $translate('Saved on the resource\'s own add or edit form, after the buttons of Batch Values were used there.'); ?></p>
+    <p class="bv-muted"><?php echo $translate('Both sides below are the fields those buttons touched, as they were before the save and as they are after it. This run cannot be cancelled here: undoing a save made by a person belongs to the archive\'s history.'); ?></p>
+</div>
+<?php elseif ($set['operation'] !== 'cancel'): ?>
+<div class="bv-summary bv-sentence">
+    <p class="bv-big"><?php echo $bv->sentence($set['operation'], $set['params'], $display, $set['property_label'], $typeLabelShow); ?>.</p>
+    <p class="bv-big2">
+        <?php if ($running): ?>
+            <?php echo sprintf($translate('Running: %1$d of %2$d done so far.'), $set['processed'], $set['total']); ?>
+        <?php else: ?>
+            <?php echo $this->hyperlink(sprintf($translate('%1$d of the %2$d selected %3$s were changed.'), $set['changed'], $set['total'], mb_strtolower($typeLabelShow)), $setUrl($set['id'], ['outcome' => 'effective']) . '#bv-changes', ['class' => 'bv-changed']); ?>
+            <?php if ($set['skipped']): ?><?php echo $this->hyperlink(sprintf($translate('%d skipped (see why).'), $set['skipped']), $setUrl($set['id'], ['outcome' => 'skipped']) . '#bv-changes', ['class' => 'bv-muted-link']); ?><?php endif; ?>
+            <?php if ($set['failed']): ?><?php echo $this->hyperlink(sprintf($translate('%d failed.'), $set['failed']), $setUrl($set['id'], ['outcome' => 'failed']) . '#bv-changes', ['class' => 'bv-failed']); ?><?php endif; ?>
+        <?php endif; ?>
+    </p>
+</div>
+<?php endif; ?>
+
+<dl class="bv-meta">
+    <dt><?php echo $translate('Resources'); ?></dt>
+    <dd><?php echo $escape($translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$set['resource_type'] ?: 'items'][0] ?? 'Items')); ?></dd>
+    <?php if (!empty($set['params']['all_properties'])): ?>
+    <dt><?php echo $translate('Property'); ?></dt>
+    <dd><?php echo $translate('All properties'); ?></dd>
+    <?php endif; ?>
+    <?php if ($set['property_term']): ?>
+    <dt><?php echo $translate('Property'); ?></dt>
+    <dd><?php echo $escape((string) $set['property_label']); ?> <span class="bv-muted"><?php echo $escape((string) $set['property_term']); ?></span></dd>
+    <?php endif; ?>
+    <?php if ($reversedSet): ?>
+    <dt><?php echo $translate('Cancels'); ?></dt>
+    <dd><?php echo $this->hyperlink('#' . $reversedSet['id'] . ' · ' . $bv->operationLabel($reversedSet['operation']), $setUrl($reversedSet['id'])); ?>
+        <?php if (!empty($set['params']['change_ids'])): ?><span class="bv-muted"><?php echo sprintf($translate('(%d selected changes)'), count($set['params']['change_ids'])); ?></span><?php endif; ?>
+    </dd>
+    <?php endif; ?>
+    <dt><?php echo $translate('By'); ?></dt>
+    <dd><?php echo $set['owner_name'] !== null ? $escape($set['owner_name']) . ' <span class="bv-muted">' . $escape((string) $set['owner_email']) . '</span>' : '<em>' . $escape($translate('not recorded')) . '</em>'; ?>
+        <?php if ($set['owner_name'] !== null && $set['owner_id'] === null): ?><span class="bv-muted">(<?php echo $escape($translate('user deleted')); ?>)</span><?php endif; ?></dd>
+    <dt><?php echo $translate('Started'); ?></dt>
+    <dd><?php echo $escape($this->i18n()->dateFormat(new \DateTime($set['created']), 'medium', 'medium')); ?></dd>
+    <?php if ($set['finished']): ?>
+    <dt><?php echo $translate('Finished'); ?></dt>
+    <dd><?php echo $escape($this->i18n()->dateFormat(new \DateTime($set['finished']), 'medium', 'medium')); ?></dd>
+    <?php endif; ?>
+    <dt><?php echo $translate('Status'); ?></dt>
+    <dd><span class="bv-status bv-status-<?php echo $escapeAttr($set['status']); ?>"><?php echo $escape($bv->statusLabel($set['status'])); ?></span>
+        <?php if ($set['job_id']): ?> · <?php echo $this->hyperlink(sprintf($translate('job #%d'), $set['job_id']), $this->url('admin/id', ['controller' => 'job', 'id' => $set['job_id']])); ?><?php endif; ?>
+        <?php if ($set['message']): ?><div class="bv-failed"><?php echo $escape($set['message']); ?></div><?php endif; ?>
+    </dd>
+    <?php if (!empty($set['selection']['return'])): ?>
+    <dt><?php echo $translate('Opened from'); ?></dt>
+    <dd><?php echo $this->hyperlink($set['selection']['return']['label'] ?? $set['selection']['return']['url'], $set['selection']['return']['url']); ?></dd>
+    <?php endif; ?>
+    <?php if (!empty($set['selection']['query'])): ?>
+    <dt><?php echo $translate('Selection'); ?></dt>
+    <dd><?php echo $this->hyperlink($translate('Items search used'), $this->url('admin/default', ['controller' => 'item', 'action' => 'browse'], ['query' => $set['selection']['query']])); ?></dd>
+    <?php endif; ?>
+</dl>
+
+<div class="bv-progress" data-progress-url="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => 'progress', 'id' => $set['id']])); ?>" data-running="<?php echo $running ? '1' : '0'; ?>">
+    <div class="bv-progress-bar"><span style="width: <?php echo round(100 * $set['processed'] / $total); ?>%"></span></div>
+    <div class="bv-progress-text">
+        <span class="bv-p-processed"><?php echo (int) $set['processed']; ?></span> / <?php echo (int) $set['total']; ?> ·
+        <span class="bv-changed"><span class="bv-p-changed"><?php echo (int) $set['changed']; ?></span> <?php echo $translate('changed'); ?></span> ·
+        <span><span class="bv-p-skipped"><?php echo (int) $set['skipped']; ?></span> <?php echo $translate('skipped'); ?></span> ·
+        <span class="bv-failed"><span class="bv-p-failed"><?php echo (int) $set['failed']; ?></span> <?php echo $translate('failed'); ?></span>
+    </div>
+</div>
+
+<?php if (!empty($set['params']['preview_stats'])): ?>
+<details class="bv-numbers"><summary><?php echo $translate('Numbers: how many values before and after'); ?></summary>
+<?php echo $this->partial('common/bv-stats', [
+    'stats' => $set['params']['preview_stats'],
+    'now' => $statsNow ?? null,
+    'typeLabel' => $translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$set['resource_type'] ?: 'items'][0] ?? 'Items'),
+    'mode' => 'log',
+]); ?>
+</details>
+<?php endif; ?>
+
+<?php if ($cancelSets): ?>
+<h3><?php echo $translate('Cancellations'); ?></h3>
+<ul>
+<?php foreach ($cancelSets as $cancelSet): ?>
+    <li><?php echo $this->hyperlink('#' . $cancelSet['id'], $setUrl($cancelSet['id'])); ?> ·
+        <?php echo sprintf($translate('%d reversed'), $cancelSet['changed']); ?> ·
+        <?php echo $escape($cancelSet['owner_name'] ?? $translate('not recorded')); ?> ·
+        <?php echo $escape($this->i18n()->dateFormat(new \DateTime($cancelSet['created']), 'medium', 'short')); ?></li>
+<?php endforeach; ?>
+</ul>
+<?php endif; ?>
+
+<h3 id="bv-changes"><?php echo $translate('Resources'); ?></h3>
+<div class="bv-tabs">
+    <?php echo $this->hyperlink(sprintf('%s (%d)', $translate('All'), array_sum($counts)), $setUrl($set['id'], ['outcome' => 'all']), ['class' => $outcome === 'all' ? 'active' : '']); ?>
+    <?php if ($effectiveCount): ?><?php echo $this->hyperlink(sprintf('%s (%d)', $translate('What changed'), $effectiveCount), $setUrl($set['id'], ['outcome' => 'effective']), ['class' => ($outcome === 'effective' ? 'active ' : '') . 'bv-outcome-changed']); ?><?php endif; ?>
+    <?php if ($skippedCount): ?><?php echo $this->hyperlink(sprintf('%s (%d)', $translate('All skipped'), $skippedCount), $setUrl($set['id'], ['outcome' => 'skipped']), ['class' => ($outcome === 'skipped' ? 'active ' : '') . 'bv-outcome-skipped_same']); ?><?php endif; ?>
+    <?php foreach ($counts as $o => $n): ?>
+    <?php echo $this->hyperlink(sprintf('%s (%d)', $bv->outcomeLabel($o), $n), $setUrl($set['id'], ['outcome' => $o]), ['class' => ($outcome === $o ? 'active ' : '') . 'bv-outcome-' . $o]); ?>
+    <?php endforeach; ?>
+</div>
+
+<div class="browse-controls"><?php echo $this->pagination(); ?></div>
+
+<?php $thumbs = $bv->thumbs(array_column($changes, 'resource_id'), $set['resource_type'] ?: 'items'); ?>
+<?php echo $bv->peekAssets(); ?>
+<table class="tablesaw bv-table bv-changes" data-peek-list data-tablesaw-mode="stack">
+    <thead><tr>
+        <th class="bv-col-resource"><?php echo $translate('Resource'); ?></th>
+        <th><?php echo $translate('Change'); ?></th>
+    </tr></thead>
+    <tbody>
+    <?php foreach ($changes as $change): ?>
+        <tr>
+            <td>
+                <?php echo $bv->resourceLink((int) $change['resource_id'], $change['resource_title'], $set['resource_type'] ?: 'items', $thumbs); ?>
+                <div class="bv-result bv-outcome-<?php echo $escapeAttr($change['outcome']); ?>"><?php echo $escape($bv->outcomeLabel($change['outcome'])); ?></div>
+                <?php if ($change['message']): ?><div class="bv-muted bv-result-note"><?php echo $escape($change['message']); ?></div><?php endif; ?>
+                <div class="bv-result-cancel">
+                <?php if ($change['reversed_by_set_id']): ?>
+                    <?php $link = $this->hyperlink('#' . $change['reversed_by_set_id'], $setUrl($change['reversed_by_set_id'])); ?>
+                    <?php if (in_array($change['reversed_by_outcome'], ['added', 'removed'], true)): ?>
+                    <span class="bv-muted"><?php echo sprintf($translate('Cancelled in %s'), $link); ?></span>
+                    <?php else: ?>
+                    <span class="bv-outcome-skipped_changed"><?php echo sprintf($translate('Not cancelled in %1$s: %2$s'), $link, $escape($bv->outcomeLabel($change['reversed_by_outcome']))); ?></span>
+                    <?php endif; ?>
+                <?php elseif (!$running && $set['operation'] !== \BatchValues\Module::FORM_EDIT && in_array($change['outcome'], ['added', 'removed', 'changed'], true) && (!$opObject || $opObject->reversible())): ?>
+                    <?php echo $this->hyperlink($translate('Cancel this change'), $this->url('admin/batch-values', ['action' => 'cancel', 'id' => $set['id']], ['query' => ['change_id' => $change['id']]]), ['class' => 'bv-cancel-link']); ?>
+                <?php endif; ?>
+                </div>
+            </td>
+            <td>
+                <?php $grids = $bv->gridsOf($change, $live ?? [], $current ?? []); ?>
+                <?php if ($grids !== null): ?>
+                    <?php echo $grids; ?>
+                <?php else: ?>
+                <?php echo $bv->changeHtml($change, !empty($set['params']['all_properties'])); ?>
+                <?php endif; ?>
+            </td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>

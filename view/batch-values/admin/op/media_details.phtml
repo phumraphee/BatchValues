@@ -1,0 +1,31 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('What to edit'); ?></strong>
+    <?php $first = true; foreach ($fields as $name => $label): ?>
+    <label><input type="radio" name="media_field" value="<?php echo $escapeAttr($name); ?>"<?php echo $first ? ' checked' : ''; ?>> <?php echo $escape($translate($label)); ?></label>
+    <?php $first = false; endforeach; ?>
+</div>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('How'); ?></strong>
+    <label><input type="radio" name="media_mode" value="set" checked> <?php echo $translate('Set to'); ?> <input type="text" name="media_text" size="40"></label>
+    <label><input type="radio" name="media_mode" value="find_replace"> <?php echo $translate('Find'); ?> <input type="text" name="media_find" size="16" class="bv-keep-spaces"> <?php echo $translate('and replace with'); ?> <input type="text" name="media_replace" size="16" class="bv-keep-spaces">
+        <span class="bv-inline-opts"><label><input type="checkbox" name="media_case" value="1" checked> <?php echo $translate('match case'); ?></label>
+        <label><input type="checkbox" name="media_regex" value="1"> <?php echo $translate('regular expression'); ?></label></span></label>
+    <label><input type="radio" name="media_mode" value="prefix"> <?php echo $translate('Add text before'); ?></label>
+    <label><input type="radio" name="media_mode" value="suffix"> <?php echo $translate('Add text after'); ?>
+        <input type="text" name="media_affix" size="20" class="bv-keep-spaces" placeholder="<?php echo $escapeAttr($translate('text to add (before or after)')); ?>"></label>
+    <label><input type="radio" name="media_mode" value="from_title"> <?php echo $translate('Alt text only: take the title of the media, or of the item when the media has none'); ?></label>
+    <label><input type="radio" name="media_mode" value="basename"> <?php echo $translate('Source only: keep only the file name (“http://x.org/a/scan-01.jpg” → “scan-01.jpg”)'); ?></label>
+    <label><input type="radio" name="media_mode" value="filename"> <?php echo $translate('Source only: keep only the file name without extension (→ “scan-01”)'); ?></label>
+    <label><input type="radio" name="media_mode" value="clear"> <?php echo $translate('Clear it'); ?></label>
+</div>
+<div class="bv-checks">
+    <label><input type="checkbox" name="only_empty" value="1"> <?php echo $translate('Only where it is empty now'); ?></label>
+</div>
+<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds]); ?>
+<p class="bv-example"><?php echo $translate('Example: alt text of all images, only where empty, from the title: an image of the item “Rice Field” gets the alt text “Rice Field”.'); ?></p>
+<p class="bv-muted"><?php echo $translate('The media type only changes the label Omeka uses to show the file; the file itself is not converted. HTML is cleaned by Omeka’s HTML filter, as when it is typed in the media form; the preview shows the result.'); ?></p>

@@ -1,0 +1,33 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array $fieldNow ['distinct', 'stats', 'count']
+ * @var string $typeLabel
+ * @var bool $withList
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$bv = $this->plugin('batchValuesRender');
+$st = $fieldNow['stats'];
+if (!$st) {
+    return;
+}
+$lower = mb_strtolower($typeLabel);
+?>
+<div class="bv-field-now">
+    <strong><?php echo $translate('Now in the selection:'); ?></strong>
+    <?php echo sprintf($translate('%1$s values · %2$s of %3$s %4$s have this property · %5$s different values · %6$s values in all %4$s'),
+        number_format($st['before']['values']), number_format($st['before']['resources']), number_format($fieldNow['count']), $escape($lower),
+        number_format($st['before']['distinct']), number_format($st['archive'][0])); ?>
+    <?php if (!empty($withList) && $fieldNow['distinct']): ?>
+    <details>
+        <summary><?php echo $translate('See the values they have'); ?></summary>
+        <ul class="bv-now-list">
+            <?php foreach (array_slice($fieldNow['distinct'], 0, 200) as $row): ?>
+            <li><?php echo $bv->valueById($row['sample_value_id']); ?> <span class="bv-value-meta"><?php echo $escape($bv->typeLabel($row['type'])); ?> · <?php echo sprintf($translate('on %d'), $row['items']); ?></span></li>
+            <?php endforeach; ?>
+        </ul>
+        <?php if (count($fieldNow['distinct']) > 200): ?><p class="bv-muted"><?php echo sprintf($translate('… and %d more.'), count($fieldNow['distinct']) - 200); ?></p><?php endif; ?>
+    </details>
+    <?php endif; ?>
+</div>

@@ -1,0 +1,28 @@
+<?php
+$translate = $this->plugin('translate');
+?>
+<div class="bv-text-fields">
+    <label><strong><?php echo $translate('Find'); ?></strong>
+        <input type="text" name="find" autocomplete="off" class="bv-keep-spaces"></label>
+    <label data-switch-show="action=replace"><strong><?php echo $translate('Replace with'); ?></strong>
+        <input type="text" name="replace" autocomplete="off" class="bv-keep-spaces">
+        <span class="bv-muted"><?php echo $translate('Leave empty to delete the text found.'); ?></span></label>
+</div>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('What to do with a value that contains it'); ?></strong>
+    <label><input type="radio" name="action" value="replace" checked> <?php echo $translate('Replace the text found'); ?></label>
+    <label><input type="radio" name="action" value="remove"> <?php echo $translate('Remove the whole value'); ?></label>
+    <label><input type="radio" name="action" value="basename"> <?php echo $translate('Keep only the file name (last part of a path or URL): “C:\\scans\\A12.tif” → “A12.tif”'); ?></label>
+    <label><input type="radio" name="action" value="filename"> <?php echo $translate('Keep only the file name without extension: → “A12”'); ?></label>
+    <span class="bv-muted"><?php echo $translate('For the file name choices, “Find” can be left empty: every value is cut.'); ?></span>
+</div>
+<p class="bv-example"><?php echo $translate('Example: find “Chiangmai”, replace with “Chiang Mai”: “Chiangmai, Thailand” → “Chiang Mai, Thailand”.'); ?></p>
+<div class="bv-checks">
+    <label><input type="checkbox" name="match_case" value="1" checked> <?php echo $translate('Match case (“Bangkok” is not “bangkok”)'); ?></label>
+    <label><input type="checkbox" name="trim" value="1" checked> <?php echo $translate('Remove spaces left at the start or end of a changed value'); ?></label>
+    <label><input type="checkbox" name="remove_empty" value="1"> <?php echo $translate('Remove a value that becomes empty (otherwise it is left as it is)'); ?></label>
+    <label><input type="checkbox" name="entities" value="1"> <?php echo $translate('Also find it where it was saved with HTML entities (“&amp;amp;” for “&amp;”)'); ?></label>
+    <label><input type="checkbox" name="regex" value="1"> <?php echo $translate('Regular expression (advanced: for example \d{4} finds any four digits; use $1 in “Replace with” for a group)'); ?></label>
+</div>
+<?php echo $this->partial('common/bv-link-part', ['fieldNow' => $fieldNow ?? []]); ?>
+<p class="bv-muted"><?php echo $translate('Every value of this property that contains the text is changed. Linked items and terms are not text and are never changed. A changed value is checked by its data type; one it does not accept is left as it is.'); ?></p>

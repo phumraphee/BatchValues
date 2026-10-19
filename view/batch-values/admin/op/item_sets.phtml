@@ -1,0 +1,20 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+// The id is only shown where two of them have the same title.
+$sameTitle = [];
+foreach ($itemSets as $r) {
+    $t = (string) $r['title'];
+    $sameTitle[$t] = isset($sameTitle[$t]);
+}
+?>
+<?php $opts = function () use ($escape, $translate, $itemSets, $sameTitle) { $html = ''; foreach ($itemSets as $r) { $title = $r['title'] !== null && $r['title'] !== '' ? $r['title'] : $translate('[Untitled]'); $html .= '<option value="' . (int) $r['id'] . '">' . $escape($title) . (empty($sameTitle[(string) $r['title']]) ? '' : ' (#' . (int) $r['id'] . ')') . '</option>'; } return $html; }; ?>
+<div class="field">
+    <div class="field-meta"><label for="bv-add"><?php echo $translate('Add to'); ?></label></div>
+    <div class="inputs"><select name="add[]" id="bv-add" multiple class="chosen-select" data-placeholder="<?php echo $escapeAttr($translate('None')); ?>"><?php echo $opts(); ?></select></div>
+</div>
+<div class="field">
+    <div class="field-meta"><label for="bv-remove"><?php echo $translate('Remove from'); ?></label></div>
+    <div class="inputs"><select name="remove[]" id="bv-remove" multiple class="chosen-select" data-placeholder="<?php echo $escapeAttr($translate('None')); ?>"><?php echo $opts(); ?></select></div>
+</div>

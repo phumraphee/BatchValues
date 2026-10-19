@@ -1,0 +1,24 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+?>
+<h4><?php echo $translate('1. Values'); ?></h4>
+<?php echo $this->partial('common/bv-picker', ['allProperties' => $allProperties ?? false, 'matchTypes' => $matchTypes ?? [], 'presetTypes' => $presetTypes ?? [], 'distinct' => $distinct, 'required' => $required, 'showRequired' => $operation->name() === 'move']); ?>
+<h4><?php echo $translate('2. To the property'); ?></h4>
+<div class="field">
+    <div class="inputs">
+        <?php echo $this->partial('common/bv-property-select', [
+            'name' => 'target_property',
+            'id' => 'bv-target-property',
+            'propertyOptions' => $propertyOptions,
+            'selectedId' => null,
+            'manyTemplates' => $manyTemplates,
+            'templateCount' => $templateCount ?? 0,
+        ]); ?>
+    </div>
+</div>
+<p class="bv-muted"><?php echo $translate('A value is not taken where the target property\'s template does not accept its data type, and not duplicated where the target already has it.'); ?></p>
+<div class="bv-inline-choice">
+    <label><?php echo $translate('At most'); ?> <input type="number" name="limit" value="0" min="0" style="width:5em"> <?php echo $translate('values per item, the first ones (0 = all)'); ?></label>
+</div>

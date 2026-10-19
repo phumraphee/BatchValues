@@ -1,0 +1,29 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+?>
+<div class="field">
+    <div class="field-meta"><label for="bv-template"><?php echo $translate('Resource template'); ?></label></div>
+    <div class="inputs">
+        <select name="template" id="bv-template" class="chosen-select">
+            <option value="keep"><?php echo $translate('— Do not change —'); ?></option>
+            <option value="none"><?php echo $translate('No template'); ?></option>
+            <?php foreach ($templates as $t): ?><option value="<?php echo (int) $t['id']; ?>"><?php echo $escape($t['label']); ?></option><?php endforeach; ?>
+        </select>
+    </div>
+</div>
+<div class="field">
+    <div class="field-meta"><label for="bv-class"><?php echo $translate('Resource class'); ?></label></div>
+    <div class="inputs">
+        <select name="class" id="bv-class" class="bv-chosen">
+            <option value="keep"><?php echo $translate('— Do not change —'); ?></option>
+            <option value="none"><?php echo $translate('No class'); ?></option>
+            <?php $vocab = null; foreach ($classes as $c): ?>
+                <?php if ($vocab !== $c['vocabulary']): ?><?php if ($vocab !== null): ?></optgroup><?php endif; $vocab = $c['vocabulary']; ?><optgroup label="<?php echo $escapeAttr($translate($vocab)); ?>"><?php endif; ?>
+                <option value="<?php echo (int) $c['id']; ?>"><?php echo $escape($translate($c['label'])); ?> (<?php echo $escape($c['prefix'] . ':' . $c['local_name']); ?>)</option>
+            <?php endforeach; ?><?php if ($vocab !== null): ?></optgroup><?php endif; ?>
+        </select>
+    </div>
+</div>
+<p class="bv-muted"><?php echo $translate('Values are not touched. A value the new template would not allow stays as it is (use "Convert to the template data type" afterwards).'); ?></p>

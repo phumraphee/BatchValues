@@ -1,0 +1,102 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var string $token
+ * @var string $resourceType
+ * @var int $count
+ * @var array $duplicates
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$bv = $this->plugin('batchValuesRender');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-check-page');
+$typeLabel = mb_strtolower($translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][0]));
+$typeController = \BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][1];
+$back = $this->url('admin/batch-values', ['action' => 'configure'], ['query' => ['token' => $token]]);
+?>
+<?php echo $this->pageTitle($translate('Values entered twice'), 1, $translate('Batch Values')); ?>
+
+<nav class="bv-breadcrumbs">
+    <?php echo $this->hyperlink($translate('Batch Values'), $this->url('admin/batch-values')); ?> ›
+    <?php echo $this->hyperlink($translate('2. What to do'), $back); ?> ›
+    <span><?php echo $translate('Values entered twice'); ?></span>
+</nav>
+
+<p class="bv-help"><?php echo sprintf($translate('Fields of the %1$d selected %2$s that hold the same value more than once: the same text, or the same linked item, with the same data type, language and visibility. Nothing is changed here.'), $count, $escape($typeLabel)); ?></p>
+<p class="bv-help"><?php echo $translate('Open “See each field in its order” to see where each copy is, and tick “keep” on the copy to keep in each item, then “Fix with these choices”. Or use “Fix: keep the first copy” / “Fix: keep the last copy” for every item at once. Either way “Clean up” opens with only “The same value entered twice” ticked; the preview shows each field in its order with the copies that go struck out. Nothing is written before you confirm, and it can be cancelled later from the log.'); ?></p>
+
+<?php if (!$duplicates): ?>
+<p class="bv-note"><?php echo $translate('No field holds the same value twice.'); ?></p>
+<?php else: ?>
+<?php echo $bv->peekAssets(); ?>
+<?php foreach ($duplicates as $propertyId => $d): ?>
+<section class="bv-check-field">
+    <div class="bv-check-group">
+        <div class="bv-check-head">
+            <strong><?php echo $escape($d['label']); ?></strong> <span class="bv-muted"><?php echo $escape($d['term']); ?></span> ·
+            <?php echo sprintf($translate('%1$d extra copies on %2$d %3$s'), $d['extra'], $d['resources'], $escape($typeLabel)); ?>
+            <span class="bv-fix-choice">
+            <?php echo $this->hyperlink($translate('Fix: keep the first copy'), $this->url('admin/batch-values', ['action' => 'duplicates-fix'], ['query' => ['token' => $token, 'property' => $propertyId, 'keep_copy' => 'first']]), ['class' => 'button bv-small-button']); ?>
+            <?php echo $this->hyperlink($translate('Fix: keep the last copy'), $this->url('admin/batch-values', ['action' => 'duplicates-fix'], ['query' => ['token' => $token, 'property' => $propertyId, 'keep_copy' => 'last']]), ['class' => 'button bv-small-button']); ?>
+            </span>
+        </div>
+        <details>
+            <summary><?php echo sprintf($translate('See each field in its order (%d)'), $d['resources']); ?></summary>
+            <form method="post" class="bv-dup-form" action="<?php echo $escape($this->url('admin/batch-values', ['action' => 'duplicates-fix'], ['query' => ['token' => $token]])); ?>">
+            <input type="hidden" name="property" value="<?php echo (int) $propertyId; ?>">
+            <p class="bv-muted"><?php echo $translate('Tick “keep” on the copy to keep in each item (the first copy is ticked to start with), then “Fix with these choices”. Every other copy of that value goes.'); ?></p>
+            <table class="tablesaw bv-table bv-dup-table" data-peek-list data-tablesaw-mode="stack">
+                <thead><tr><th><?php echo $escape(ucfirst($typeLabel)); ?></th><th><?php echo sprintf($translate('%s, in its order'), $escape($d['label'])); ?></th><th></th></tr></thead>
+                <tbody>
+                <?php $thumbs = $bv->thumbs(array_keys($d['fields']), $resourceType); ?>
+                <?php foreach ($d['fields'] as $resourceId => $fieldRows): ?>
+                    <?php
+                    // Number of each copy: "1 of 2", "2 of 2".
+                    $keys = [];
+                    foreach ($fieldRows as $row) {
+                        $keys[] = \BatchValues\Stdlib\Planner::dupKey($row);
+                    }
+                    $totals = array_count_values($keys);
+                    $seen = [];
+                    ?>
+                    <tr>
+                        <td><?php echo $bv->resourceLink((int) $resourceId, $d['titles'][$resourceId] ?? null, $resourceType, $thumbs); ?></td>
+                        <td><ol class="bv-dup-field">
+                        <?php foreach ($fieldRows as $i => $row): ?>
+                            <?php $k = $keys[$i]; $seen[$k] = ($seen[$k] ?? 0) + 1; $isDup = $totals[$k] > 1; ?>
+                            <li class="<?php echo $isDup ? 'bv-dup-copy' : ''; ?>">
+                                <?php if ($isDup): ?><label class="bv-keep-radio" title="<?php echo $escape($translate('Keep this copy')); ?>"><input type="radio" name="keep[<?php echo (int) $resourceId; ?>][<?php echo md5($k); ?>]" value="<?php echo (int) $row['id']; ?>"<?php echo $seen[$k] === 1 ? ' checked' : ''; ?>> <?php echo $translate('keep'); ?></label><?php endif; ?>
+                                <?php echo $bv(\BatchValues\Stdlib\Planner::snapshotFromRow($row)); ?>
+                                <?php if ($isDup): ?><span class="bv-flag bv-flag-dup"><?php echo sprintf($translate('copy %1$d of %2$d'), $seen[$k], $totals[$k]); ?></span><?php endif; ?>
+                                <?php if (!$row['is_public']): ?><span class="bv-flag bv-flag-private"><?php echo $escape($translate('Private')); ?></span><?php endif; ?>
+                                <?php if (!empty($row['value_annotation_id'])): ?><span class="bv-flag"><?php echo $escape($translate('annotated')); ?></span><?php endif; ?>
+                            </li>
+                        <?php endforeach; ?>
+                        </ol></td>
+                        <td><?php echo $this->hyperlink($translate('Edit'), $this->url('admin/id', ['controller' => $typeController, 'action' => 'edit', 'id' => (int) $resourceId]), ['target' => '_blank']); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <div class="bv-dup-form-bar">
+                <?php if ($d['resources'] > count($d['fields'])): ?>
+                <label><?php echo sprintf($translate('For the other %d items, not shown here, keep:'), $d['resources'] - count($d['fields'])); ?>
+                    <select name="keep_copy"><option value="first"><?php echo $translate('the first copy'); ?></option><option value="last"><?php echo $translate('the last copy'); ?></option></select>
+                </label>
+                <?php endif; ?>
+                <button type="submit" class="button"><?php echo $translate('Fix with these choices'); ?></button>
+                <span class="bv-muted"><?php echo $translate('Opens the preview step; nothing is written yet.'); ?></span>
+            </div>
+            </form>
+            <?php if ($d['resources'] > count($d['fields'])): ?>
+            <p class="bv-muted"><?php echo sprintf($translate('The first %1$d of %2$d. “Fix” takes them all.'), count($d['fields']), $d['resources']); ?></p>
+            <?php endif; ?>
+        </details>
+    </div>
+</section>
+<?php endforeach; ?>
+<p class="bv-muted"><?php echo $translate('Not counted: copies that differ in visibility (one public, one private), or in upper and lower case. For the latter, use “Clean up” with “even when upper and lower case differ”.'); ?></p>
+<?php endif; ?>
+
+<div class="bv-actions"><?php echo $this->hyperlink($translate('Back'), $back, ['class' => 'button']); ?></div>

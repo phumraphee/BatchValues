@@ -1,0 +1,7 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+?>
+<p class="bv-help"><?php echo $translate('The input follows the data type the resource templates set for this field. An item that already has the same value is skipped.'); ?></p>
+<?php echo $this->partial('common/bv-typed-groups', ['groups' => $groups, 'dataTypeNames' => $dataTypeNames, 'propertyId' => $property ? $property->getId() : null, 'single' => false]); ?>

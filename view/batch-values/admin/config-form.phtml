@@ -1,0 +1,146 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array $vocabularies
+ * @var int[] $hidden
+ * @var int $syncLimit
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+?>
+<fieldset>
+    <legend><?php echo $translate('Property list'); ?></legend>
+    <div class="field">
+        <div class="field-meta">
+            <label><?php echo $translate('Vocabularies not listed'); ?></label>
+            <div class="field-description"><?php echo $translate('Their properties are left out of the property menu. A property used by the resource template of the selected items is always shown, in the first group of the menu, whatever its vocabulary.'); ?></div>
+        </div>
+        <div class="inputs">
+            <?php foreach ($vocabularies as $vocabulary): ?>
+            <label style="display:block">
+                <input type="checkbox" name="batchvalues_hidden_vocabularies[]" value="<?php echo (int) $vocabulary['id']; ?>" <?php echo in_array((int) $vocabulary['id'], $hidden, true) ? 'checked' : ''; ?>>
+                <?php echo $escape($translate($vocabulary['label'])); ?>
+                <span style="color:#777">(<?php echo $escape($vocabulary['prefix']); ?> · <?php echo sprintf($translate('%d properties'), $vocabulary['properties']); ?>)</span>
+            </label>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</fieldset>
+<fieldset>
+    <legend><?php echo $translate('Batch actions menu'); ?></legend>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_hide_core_batch_edit"><?php echo $translate('Hide Omeka\'s "Edit selected" and "Edit all"'); ?></label>
+            <div class="field-description"><?php echo $translate('On the Items, Item sets and Media lists, only "Edit with Batch Values" remains for editing, placed above the delete entries. Deleting is not affected. Omeka\'s batch edit is still reachable from Batch Values: "Use Omeka\'s batch edit instead", next to the selection.'); ?></div>
+        </div>
+        <div class="inputs"><input type="checkbox" id="batchvalues_hide_core_batch_edit" name="batchvalues_hide_core_batch_edit" value="1" <?php echo !empty($hideCore) ? 'checked' : ''; ?>></div>
+    </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_browse_peek"><?php echo $translate('Quick look from the pictures of items'); ?></label>
+            <div class="field-description"><?php echo $translate('On the Items, Item sets and Media lists, and on the page of an item (Related Item and other links, Linked resources, media), a click on a picture opens a popup with the picture, the media and the values; ← → go to the previous or next one, Esc closes. The title still opens the page, and Ctrl or Cmd-click on the picture too.'); ?></div>
+        </div>
+        <div class="inputs"><input type="checkbox" id="batchvalues_browse_peek" name="batchvalues_browse_peek" value="1" <?php echo !empty($browsePeek) ? 'checked' : ''; ?>></div>
+    </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_fix_cancel"><?php echo $translate('Make "Cancel" on the add and edit forms go to a page'); ?></label>
+            <div class="field-description"><?php echo $translate('Omeka\'s own Cancel goes one step back in the browser history, which does nothing when the form was opened in a new tab (from the quick look\'s "Edit", or any link opened in a new tab): the tab stays put or goes blank. With this on, Cancel goes to the page of the item being edited, or to the list when a new one is being added. Nothing is saved either way.'); ?></div>
+        </div>
+        <div class="inputs"><input type="checkbox" id="batchvalues_fix_cancel" name="batchvalues_fix_cancel" value="1" <?php echo !empty($fixCancel) ? 'checked' : ''; ?>></div>
+    </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_keep_removed_files"><?php echo $translate('Keep the file when a media is deleted'); ?></label>
+            <div class="field-description"><?php echo $translate('"Delete media" puts the original file in files/batchvalues-removed/ before the media goes, so Cancel can put the media back with its file, its values and its place in the item. The kept files stay there until someone empties that folder, so it grows: check it now and then. With this off, deleting cannot be cancelled.'); ?></div>
+        </div>
+        <div class="inputs"><input type="checkbox" id="batchvalues_keep_removed_files" name="batchvalues_keep_removed_files" value="1" <?php echo !empty($keepRemoved) ? 'checked' : ''; ?>></div>
+    </div>
+</fieldset>
+<fieldset>
+    <legend><?php echo $translate('When an item is saved'); ?></legend>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_save_trim"><?php echo $translate('Remove spaces at the start and end of values'); ?></label>
+            <div class="field-description"><?php echo $translate('Every time an item, item set or media is saved (edit form, import, API): “ Bangkok ” is saved as “Bangkok”. Applies to text, labels and URLs. To clean what is there already, use “Clean up spaces and duplicates”.'); ?></div>
+        </div>
+        <div class="inputs"><input type="checkbox" id="batchvalues_save_trim" name="batchvalues_save_trim" value="1" <?php echo !empty($saveTrim) ? 'checked' : ''; ?>></div>
+    </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_save_dedupe"><?php echo $translate('Do not save the same value twice'); ?></label>
+            <div class="field-description"><?php echo $translate('When a field gets the same value twice (same text, data type, language and visibility), only the first is saved. Values with an annotation are always kept.'); ?></div>
+        </div>
+        <div class="inputs"><input type="checkbox" id="batchvalues_save_dedupe" name="batchvalues_save_dedupe" value="1" <?php echo !empty($saveDedupe) ? 'checked' : ''; ?>></div>
+    </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_save_link_type"><?php echo $translate('Save a link with its exact data type'); ?></label>
+            <div class="field-description"><?php echo $translate('Omeka\'s form has one button for links, "Omeka resource", which saves the general data type; only a field whose template says "Item" saves "Item". The same click then gives two different data types, and the same linked item can sit twice in a field without Omeka seeing it twice. With this on, a link is saved as Item, Item set or Media, following what it points to, unless the template of the field asks for another data type. A link that becomes the same as another link of the field this way is not saved twice.'); ?></div>
+        </div>
+        <div class="inputs"><input type="checkbox" id="batchvalues_save_link_type" name="batchvalues_save_link_type" value="1" <?php echo !empty($saveLinkType) ? 'checked' : ''; ?>></div>
+    </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_form_confirm"><?php echo $translate('Ask before saving and before leaving the add and edit form'); ?></label>
+            <div class="field-description"><?php echo $translate('The pages of Batch Values always ask before they write; this makes Omeka\'s own form ask too. "Leave" only asks when something was typed or picked on the page. Whatever is chosen here, the form always warns when it is longer than the server accepts in one save. When another module already asks the same question with more to say — the archive\'s history shows what the save would change — that one asks and this setting stands down, so nobody is asked twice.'); ?></div>
+        </div>
+        <div class="inputs">
+            <select id="batchvalues_form_confirm" name="batchvalues_form_confirm">
+                <option value="both"<?php echo ($formConfirm ?? 'both') === 'both' ? ' selected' : ''; ?>><?php echo $translate('Ask before Save and before Cancel'); ?></option>
+                <option value="cancel"<?php echo ($formConfirm ?? '') === 'cancel' ? ' selected' : ''; ?>><?php echo $translate('Ask before Cancel only'); ?></option>
+                <option value="off"<?php echo ($formConfirm ?? '') === 'off' ? ' selected' : ''; ?>><?php echo $translate('Do not ask'); ?></option>
+            </select>
+        </div>
+    </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_form_tools"><?php echo $translate('Sort and move values on the add and edit form'); ?></label>
+            <div class="field-description"><?php echo $translate('Puts two buttons on every field of Omeka\'s own form (A → Z and Z → A, in the same order as the "Sort the values" operation), and "Move or copy" on a field and on each single value. It is the same work as "Sort the values" and "Move to another property" without leaving the form, for the times when only one item is being edited. Nothing is written until Save is pressed, so there is no preview and no undo of Batch Values: the archive\'s history records the save like any other save made by a person. Omeka\'s own drag handle on the left of each value still works.'); ?></div>
+        </div>
+        <div class="inputs"><input type="checkbox" id="batchvalues_form_tools" name="batchvalues_form_tools" value="1" <?php echo !empty($formTools) ? 'checked' : ''; ?>></div>
+    </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_form_log"><?php echo $translate('Write those to the log'); ?></label>
+            <div class="field-description"><?php echo $translate('When a save is made after those buttons were used, the fields they touched are written to the history of Batch Values, both sides, so the run can be read later like any other. Only those fields, not the whole save. The run cannot be cancelled from here: undoing a save made by a person belongs to the archive\'s history module. Needs the setting above.'); ?></div>
+        </div>
+        <div class="inputs"><input type="checkbox" id="batchvalues_form_log" name="batchvalues_form_log" value="1" <?php echo !empty($formLog) ? 'checked' : ''; ?>></div>
+    </div>
+</fieldset>
+<fieldset>
+    <legend><?php echo $translate('Accession numbers'); ?></legend>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_accession_property"><?php echo $translate('Field that holds the accession number'); ?></label>
+            <div class="field-description"><?php echo $translate('The term of the field the check “Accession numbers” reads, for example dcterms:identifier. The check can be pointed at another field on its own page; this is only what it starts with.'); ?></div>
+        </div>
+        <div class="inputs"><input type="text" id="batchvalues_accession_property" name="batchvalues_accession_property" value="<?php echo $this->escapeHtmlAttr($accessionProperty ?? ''); ?>" placeholder="dcterms:identifier"></div>
+    </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_accession_placeholder_years"><?php echo $translate('Years that stand for “not known”'); ?></label>
+            <div class="field-description"><?php echo $translate('Numbers written in the place of the year when the year is not known. Runs in these are still checked, but they are listed apart, because a gap there says less than a gap in a real year. Separate them with spaces.'); ?></div>
+        </div>
+        <div class="inputs"><input type="text" id="batchvalues_accession_placeholder_years" name="batchvalues_accession_placeholder_years" value="<?php echo $this->escapeHtmlAttr($accessionYears ?? ''); ?>" placeholder="0000 0001 0002 0003"></div>
+    </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_accession_shapes"><?php echo $translate('Shapes'); ?></label>
+            <div class="field-description"><?php echo $translate('How your accession numbers are written, one shape per line: a regular expression with a group named “serial” (the number that goes up by one for each new piece), then “ | ”, then the groups the serial counts inside, separated by commas. A group named “year” is compared with the years above. Empty: the check is off.'); ?>
+                <pre style="white-space:pre-wrap;margin:6px 0 0">/^(?&lt;year&gt;\d{4})-(?&lt;serial&gt;\d{4})$/ | year
+/^(?&lt;kind&gt;[A-Z]+)-(?&lt;year&gt;\d{4})-(?&lt;serial&gt;\d{4})$/ | kind, year</pre></div>
+        </div>
+        <div class="inputs"><textarea id="batchvalues_accession_shapes" name="batchvalues_accession_shapes" rows="4" style="font-family:monospace"><?php echo $this->escapeHtml($accessionShapes ?? ''); ?></textarea></div>
+    </div>
+</fieldset>
+<fieldset>
+    <legend><?php echo $translate('Running'); ?></legend>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_sync_limit"><?php echo $translate('Run in the background above this many items'); ?></label>
+            <div class="field-description"><?php echo $translate('Smaller runs are done at once; larger ones become a job (Admin → Jobs).'); ?></div>
+        </div>
+        <div class="inputs"><input type="number" min="1" id="batchvalues_sync_limit" name="batchvalues_sync_limit" value="<?php echo (int) $syncLimit; ?>"></div>
+    </div>
+</fieldset>

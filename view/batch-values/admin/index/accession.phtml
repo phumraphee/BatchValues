@@ -1,0 +1,296 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var string $token
+ * @var string $resourceType
+ * @var int $count
+ * @var \Omeka\Api\Representation\PropertyRepresentation|null $property
+ * @var string|null $propertyTerm
+ * @var array $propertyOptions
+ * @var array $years
+ * @var array|null $issues
+ * @var array $thumbIds
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$bv = $this->plugin('batchValuesRender');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->headScript()->appendFile($this->assetUrl('js/batch-values.js', 'BatchValues'), 'text/javascript', ['defer' => 'defer']);
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-check-page');
+$typeLabel = mb_strtolower($translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][0]));
+$typeController = \BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][1];
+$back = $this->url('admin/batch-values', ['action' => 'configure'], ['query' => ['token' => $token]]);
+$thumbs = $bv->thumbs($thumbIds, $resourceType);
+$here = $this->url('admin/batch-values', ['action' => 'accession'], ['query' => ['token' => $token]]);
+$pad = function ($n, $width) { return str_pad((string) $n, $width, '0', STR_PAD_LEFT); };
+$runs = function (array $missing, $width) use ($pad) {
+    $out = [];
+    foreach ($missing as [$a, $b]) {
+        $out[] = $a === $b ? $pad($a, $width) : $pad($a, $width) . '–' . $pad($b, $width);
+    }
+    return implode(', ', $out);
+};
+// Every run, not only the ones with something missing: the table is also how
+// many numbers each year holds (0.12.2).
+$sets = [];
+$rows = [];
+foreach ($shapes as $name => $shape) {
+    $over = $shape['group'] ? implode(', ', $shape['group']) : $translate('the whole field');
+    $sets[] = [
+        $name,
+        sprintf($translate('Shape %1$s, by %2$s'), $name, $over),
+        $shape['group']
+            ? sprintf($translate('One run for each %s: the serial climbs by one inside it, and a new one starts the count again.'), $over)
+            : $translate('One run for the whole field.'),
+    ];
+    $rows[$name] = [];
+}
+if ($years) {
+    $sets[] = ['*', sprintf($translate('Years that stand for “not known” (%s)'), implode(', ', $years)), $translate('These are not a year, so a gap here says less than a gap in a real year.')];
+}
+$rows['*'] = [];
+$withGap = $missingAll = 0;
+foreach ($issues['groups'] ?? [] as $group) {
+    $rows[$group['placeholder'] ? '*' : $group['pattern']][] = $group;
+    if ($group['missing_total']) { ++$withGap; }
+    // Every run is read from 0001 down to its last number, so a run that
+    // starts at 0002 counts 0001 as never used, like any other gap.
+    $missingAll += $group['missing_total'];
+}
+// A number in use, with the item it is on, so a gap can be walked to.
+$where = function ($at) use ($bv, $resourceType, $thumbs, $titles, $escape) {
+    if (!$at) { return '<span class="bv-muted">&mdash;</span>'; }
+    return '<code>' . $escape($at['value']) . '</code> '
+        . $bv->resourceLink((int) $at['resource_id'], $titles[(int) $at['resource_id']] ?? null, $resourceType, $thumbs);
+};
+?>
+<?php echo $this->pageTitle($translate('Accession numbers'), 1, $translate('Batch Values')); ?>
+
+<nav class="bv-breadcrumbs">
+    <?php echo $this->hyperlink($translate('Batch Values'), $this->url('admin/batch-values')); ?> ›
+    <?php echo $this->hyperlink($translate('2. What to do'), $back); ?> ›
+    <span><?php echo $translate('Accession numbers'); ?></span>
+</nav>
+
+<p class="bv-help"><?php echo sprintf($translate('The accession numbers of the %1$d selected %2$s: which numbers of a run were never used, what fits no known shape, and what looks like a slip. Nothing is changed here, and nothing is called a mistake: a number that was never used is often a piece that was withdrawn or never accessioned.'), $count, $escape($typeLabel)); ?></p>
+
+<form method="get" action="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => 'accession'])); ?>" class="bv-accession-pick">
+    <input type="hidden" name="token" value="<?php echo $escapeAttr($token); ?>">
+    <label for="bv-accession-property"><?php echo $translate('Field (property)'); ?></label>
+    <?php echo $this->partial('common/bv-property-select', [
+        'name' => 'property',
+        'id' => 'bv-accession-property',
+        'propertyOptions' => $propertyOptions,
+        'selectedId' => $property ? $property->id() : null,
+        'manyTemplates' => false,
+        'templateCount' => 0,
+        'withAll' => false,
+    ]); ?>
+    <button type="submit" class="button bv-small-button"><?php echo $translate('Look at this field'); ?></button>
+</form>
+
+<?php if (!$shapes): ?>
+<p class="bv-note"><?php echo $translate('No shapes of accession number are set. Write them in Configure (Accession numbers → Shapes), one per line.'); ?></p>
+<?php elseif (!$property): ?>
+<p class="bv-note"><?php echo sprintf($translate('No field to read. Set one in Configure (now “%s”), or pick one above.'), $escape((string) $propertyTerm)); ?></p>
+<?php elseif (!$issues || !$issues['total']): ?>
+<p class="bv-note"><?php echo sprintf($translate('None of the selected %1$s has a value in “%2$s”.'), $escape($typeLabel), $escape($property->label())); ?></p>
+<?php else: ?>
+
+<div class="bv-accession-head">
+    <strong><?php echo $escape($property->label()); ?></strong> <span class="bv-muted"><?php echo $escape($property->term()); ?></span>
+    <span class="bv-muted">·</span>
+    <span class="bv-muted"><?php echo sprintf($translate('%d value(s) read'), $issues['total']); ?></span>
+    <?php foreach ($shapes as $name => $shape): ?>
+    <span class="bv-muted">· <?php echo sprintf($translate('shape %1$s: %2$d'), $name, $issues['parsed'][$name] ?? 0); ?></span>
+    <?php endforeach; ?>
+    <?php if (!empty($issues['kinds']['link'])): ?>
+    <div class="bv-muted"><?php echo sprintf($translate('%d of them are a link to another item, not a number this one was given. A link is counted here and nowhere else: an item can hold several numbers, so there is no saying which one a link stands for.'), $issues['kinds']['link']); ?></div>
+    <?php endif; ?>
+    <?php if (!empty($issues['kinds']['uri']) || !empty($issues['kinds']['empty'])): ?>
+    <div class="bv-muted"><?php echo sprintf($translate('%1$d are a URI and %2$d are empty; neither takes a place in a run.'), $issues['kinds']['uri'] ?? 0, $issues['kinds']['empty'] ?? 0); ?></div>
+    <?php endif; ?>
+    <?php if (!empty($issues['parsed']['?'])): ?>
+    <span class="bv-accession-odd">· <?php echo sprintf($translate('no known shape: %d'), $issues['parsed']['?']); ?></span>
+    <?php endif; ?>
+</div>
+
+<?php if ($issues['zeros']): ?>
+<section class="bv-check-field">
+    <div class="bv-check-group">
+        <div class="bv-check-head"><strong><?php echo $translate('Numbered 0000'); ?></strong>
+            <span class="bv-muted"><?php echo sprintf($translate('%d value(s)'), count($issues['zeros'])); ?></span></div>
+        <p class="bv-muted"><?php echo $translate('A run starts at 0001, so a piece numbered 0000 is almost always a slip. It is left out of its run and said here instead.'); ?></p>
+        <table class="tablesaw bv-table" data-tablesaw-mode="stack">
+            <thead><tr><th><?php echo $translate('Run'); ?></th><th><?php echo $translate('Which value'); ?></th></tr></thead>
+            <tbody>
+            <?php foreach ($issues['zeros'] as $zero): ?>
+                <tr>
+                    <td><code><?php echo $escape($zero['label']); ?></code></td>
+                    <td><code class="bv-accession-odd"><?php echo $escape($zero['value']); ?></code>
+                        <?php echo $bv->resourceLink((int) $zero['resource_id'], $titles[(int) $zero['resource_id']] ?? null, $resourceType, $thumbs); ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php if ($issues['case_twins']): ?>
+<section class="bv-check-field">
+    <div class="bv-check-group">
+        <div class="bv-check-head"><strong><?php echo $translate('Written in a different case from the rest'); ?></strong></div>
+        <p class="bv-muted"><?php echo $translate('The same code written two ways is two different codes to a computer, so it takes its number out of the run it belongs to. This is the one thing on this page that is almost always a slip of the shift key.'); ?></p>
+        <table class="tablesaw bv-table" data-tablesaw-mode="stack">
+            <thead><tr><th><?php echo $translate('Written'); ?></th><th><?php echo $translate('Times'); ?></th><th><?php echo $translate('The usual spelling'); ?></th><th><?php echo $translate('Times'); ?></th><th><?php echo $translate('Which value'); ?></th></tr></thead>
+            <tbody>
+            <?php foreach ($issues['case_twins'] as $twin): ?>
+                <tr>
+                    <td><code class="bv-accession-odd"><?php echo $escape($twin['odd']); ?></code></td>
+                    <td><?php echo (int) $twin['odd_count']; ?></td>
+                    <td><code><?php echo $escape($twin['usual']); ?></code></td>
+                    <td><?php echo (int) $twin['usual_count']; ?></td>
+                    <td><?php foreach ($twin['where'] as $one): ?><div class="bv-accession-one"><code class="bv-accession-odd"><?php echo $escape($one['value']); ?></code> <?php echo $bv->resourceLink((int) $one['resource_id'], $titles[(int) $one['resource_id']] ?? null, $resourceType, $thumbs); ?></div><?php endforeach; ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php if ($issues['unparsed']): ?>
+<section class="bv-check-field">
+    <div class="bv-check-group">
+        <div class="bv-check-head"><strong><?php echo $translate('Fits no known shape'); ?></strong>
+            <span class="bv-muted"><?php echo sprintf($translate('%d value(s)'), $issues['parsed']['?'] ?? count($issues['unparsed'])); ?></span></div>
+        <p class="bv-muted"><?php echo $translate('These are not counted in any run. Either they are written differently on purpose, or a new shape has appeared that this check does not know yet.'); ?></p>
+        <table class="tablesaw bv-table" data-peek-list data-tablesaw-mode="stack">
+            <thead><tr><th><?php echo $translate('Value'); ?></th><th><?php echo $escape(ucfirst($typeLabel)); ?></th></tr></thead>
+            <tbody>
+            <?php foreach ($issues['unparsed'] as $row): ?>
+                <tr>
+                    <td><code><?php echo $escape($row['value']); ?></code></td>
+                    <td><?php echo $bv->resourceLink($row['resource_id'], $titles[(int) $row['resource_id']] ?? null, $resourceType, $thumbs); ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
+<?php endif; ?>
+
+<p class="bv-help bv-accession-sum"><?php echo sprintf($translate('%1$d run(s) in all · %2$d of them have a number that was never used, %3$d number(s) in all. Every run is read from 0001.'), count($issues['groups']), $withGap, $missingAll); ?></p>
+
+<?php foreach ($sets as [$which, $heading, $note]): ?>
+<?php $list = $rows[$which]; if (!$list) { continue; }
+$inUse = $gone = 0;
+foreach ($list as $g) { $inUse += $g['count']; $gone += $g['missing_total']; }
+?>
+<section class="bv-check-field">
+    <div class="bv-check-group">
+        <div class="bv-check-head"><strong><?php echo $escape($heading); ?></strong>
+            <span class="bv-muted"><?php echo sprintf($translate('%1$d run(s) · %2$d number(s) in use · %3$d missing'), count($list), $inUse, $gone); ?></span></div>
+        <p class="bv-muted"><?php echo $escape($note); ?></p>
+        <table class="tablesaw bv-table bv-accession-runs" data-peek-list data-tablesaw-mode="stack">
+            <thead><tr>
+                <th><?php echo $translate('Run'); ?></th>
+                <th><?php echo $translate('In use'); ?></th>
+                <th><?php echo $translate('From'); ?></th>
+                <th><?php echo $translate('Never used'); ?></th>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($list as $group): ?>
+                <tr<?php echo $group['missing_total'] ? ' class="bv-accession-hole"' : ''; ?>>
+                    <td><button type="button" class="bv-run-toggle" aria-expanded="false"
+                            data-url="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => 'accession-run'], ['query' => ['token' => $token, 'property' => $property ? $property->id() : 0, 'key' => $group['key']]])); ?>"><?php echo $escape($group['label']); ?></button></td>
+                    <td><?php echo (int) $group['count']; ?></td>
+                    <td><code><?php echo $escape($pad($group['from'], $group['width']) . '–' . $pad($group['to'], $group['width'])); ?></code></td>
+                    <td>
+                        <?php if (!$group['missing_total']): ?>
+                        <span class="bv-muted"><?php echo $translate('nothing missing'); ?></span>
+                        <?php else: ?>
+                        <details class="bv-accession-gaps">
+                            <summary><strong><?php echo (int) $group['missing_total']; ?></strong> · <code><?php echo $escape($runs($group['missing'], $group['width'])); ?></code></summary>
+                            <ul class="bv-accession-neighbours">
+                                <?php foreach ($group['gaps'] as $gap): ?>
+                                    <li>
+                                        <code class="bv-neighbour-gap"><?php echo $escape($gap['from'] === $gap['to'] ? $pad($gap['from'], $group['width']) : $pad($gap['from'], $group['width']) . '–' . $pad($gap['to'], $group['width'])); ?></code>
+                                        <span class="bv-neighbour"><span class="bv-neighbour-label"><?php echo $translate('The one under it'); ?></span> <?php echo $where($gap['under']); ?></span>
+                                        <span class="bv-neighbour"><span class="bv-neighbour-label"><?php echo $translate('The one over it'); ?></span> <?php echo $where($gap['over']); ?></span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </details>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
+<?php endforeach; ?>
+
+<dialog class="bv-run-dialog" aria-label="<?php echo $escapeAttr($translate('The numbers of this run')); ?>">
+    <div class="bv-run-dialog-head">
+        <strong class="bv-run-dialog-title"></strong>
+        <button type="button" class="bv-run-close"><?php echo $translate('Close'); ?></button>
+    </div>
+    <div class="bv-run-list" data-loading="<?php echo $escapeAttr($translate('Reading the numbers of this run…')); ?>"
+        data-failed="<?php echo $escapeAttr($translate('The numbers of this run could not be read.')); ?>"
+        data-none="<?php echo $escapeAttr($translate('No number of this run could be read.')); ?>"
+        data-counts="<?php echo $escapeAttr($translate('%1 value(s) · %2 number(s): a number counts once however many pieces share it.')); ?>"></div>
+</dialog>
+
+<?php if ($issues['shared']): ?>
+<details class="bv-cleanup-issue">
+    <summary><strong><?php echo $translate('The same number on more than one item'); ?></strong>
+        <span class="bv-muted"><?php echo sprintf($translate('%d number(s)'), count($issues['shared'])); ?></span></summary>
+    <p class="bv-muted"><?php echo $translate('Written out as text on more than one item. A value that links to another item is not in this list: it is not a number this item was given. Shown so it can be judged, not because it is wrong — a set of pieces may carry the number of the whole set on purpose.'); ?></p>
+    <table class="tablesaw bv-table" data-peek-list data-tablesaw-mode="stack">
+        <thead><tr><th><?php echo $translate('Value'); ?></th><th><?php echo $translate('On'); ?></th><th><?php echo $translate('Data type'); ?></th><th><?php echo $escape(ucfirst($typeLabel)); ?></th></tr></thead>
+        <tbody>
+        <?php foreach (array_slice($issues['shared'], 0, 50) as $row): ?>
+            <tr>
+                <td><code><?php echo $escape($row['value']); ?></code></td>
+                <td><?php echo sprintf($translate('%d items'), $row['count']); ?></td>
+                <td><?php foreach ($row['types'] as $t) { echo '<code>' . $escape($t) . '</code> '; } ?></td>
+                <td><?php foreach (array_slice($row['resources'], 0, 10) as $id) { echo $bv->resourceLink($id, $titles[(int) $id] ?? null, $resourceType, $thumbs) . ' '; } ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php if (count($issues['shared']) > 50): ?>
+    <p class="bv-muted"><?php echo sprintf($translate('The first 50 of %d.'), count($issues['shared'])); ?></p>
+    <?php endif; ?>
+</details>
+<?php endif; ?>
+
+<?php if ($issues['rare_kinds']): ?>
+<details class="bv-cleanup-issue">
+    <summary><strong><?php echo $translate('Codes used only once or twice'); ?></strong>
+        <span class="bv-muted"><?php echo sprintf($translate('%d code(s)'), count($issues['rare_kinds'])); ?></span></summary>
+    <p class="bv-muted"><?php echo $translate('Beside codes used hundreds of times, one used once may be a typing slip — or a kind of piece the archive holds only one of.'); ?></p>
+    <table class="tablesaw bv-table" data-peek-list data-tablesaw-mode="stack">
+        <thead><tr><th><?php echo $translate('Code'); ?></th><th><?php echo $translate('Times'); ?></th><th><?php echo $translate('Which value'); ?></th></tr></thead>
+        <tbody>
+        <?php foreach ($issues['rare_kinds'] as $rare): ?>
+            <tr>
+                <td><code><?php echo $escape($rare['kind']); ?></code></td>
+                <td><?php echo (int) $rare['count']; ?></td>
+                <td><?php foreach ($rare['where'] as $one): ?><div class="bv-accession-one"><code><?php echo $escape($one['value']); ?></code> <?php echo $bv->resourceLink((int) $one['resource_id'], $titles[(int) $one['resource_id']] ?? null, $resourceType, $thumbs); ?></div><?php endforeach; ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</details>
+<?php endif; ?>
+
+<?php endif; ?>
+
+<div class="bv-actions">
+    <?php echo $this->hyperlink($translate('Back'), $back, ['class' => 'button']); ?>
+</div>

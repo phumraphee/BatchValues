@@ -1,0 +1,13 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+?>
+<?php echo $this->partial('common/bv-picker', ['allProperties' => $allProperties ?? false, 'matchTypes' => $matchTypes ?? [], 'presetTypes' => $presetTypes ?? [], 'distinct' => $distinct, 'required' => []]); ?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('What to do with the checked values'); ?></strong>
+    <label><input type="radio" name="mode" value="switch" checked> <?php echo $translate('Switch each one: public becomes private, private becomes public'); ?></label>
+    <label><input type="radio" name="mode" value="private"> <?php echo $translate('Make them all private'); ?></label>
+    <label><input type="radio" name="mode" value="public"> <?php echo $translate('Make them all public'); ?></label>
+</div>
+<p class="bv-muted"><?php echo $translate('Each wording appears once per visibility, so you can check "Born-digital · Public" without touching "Born-digital · Private", and the reverse.'); ?></p>

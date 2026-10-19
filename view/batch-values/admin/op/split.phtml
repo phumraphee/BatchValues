@@ -1,0 +1,21 @@
+<?php
+$translate = $this->plugin('translate');
+?>
+<h4><?php echo $translate('1. Values'); ?></h4>
+<?php echo $this->partial('common/bv-picker', ['allProperties' => $allProperties ?? false, 'matchTypes' => $matchTypes ?? [], 'presetTypes' => $presetTypes ?? [], 'distinct' => $distinct, 'required' => [], 'pickerAllDefault' => true,
+    'pickerHelp' => $translate('Split all values of the property that contain the separator, or only the ones you check.')]); ?>
+<h4><?php echo $translate('2. Separator'); ?></h4>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('Split at'); ?></strong>
+    <label><input type="radio" name="separator" value="semicolon" checked> <?php echo $translate('; semicolon'); ?></label>
+    <label><input type="radio" name="separator" value="comma"> <?php echo $translate(', comma'); ?></label>
+    <label><input type="radio" name="separator" value="pipe"> <?php echo $translate('| vertical bar'); ?></label>
+    <label><input type="radio" name="separator" value="slash"> <?php echo $translate('/ slash'); ?></label>
+    <label><input type="radio" name="separator" value="newline"> <?php echo $translate('line break'); ?></label>
+    <label><input type="radio" name="separator" value="other"> <?php echo $translate('other:'); ?> <input type="text" name="separator_other" size="6" class="bv-keep-spaces"> <span class="bv-muted"><?php echo $translate('(\\t = tab)'); ?></span></label>
+</div>
+<div class="bv-inline-choice">
+    <label><?php echo $translate('At most'); ?> <input type="number" name="max_parts" value="0" min="0" style="width:5em"> <?php echo $translate('parts (0 = no limit; the rest stays together in the last part)'); ?></label>
+</div>
+<p class="bv-example"><?php echo $translate('Example: “Bangkok; Chiang Mai” → “Bangkok” and “Chiang Mai”.'); ?></p>
+<p class="bv-muted"><?php echo $translate('Only plain text values that contain the separator are split. Spaces around each part are removed; empty parts and parts the item already has are dropped. The first part stays in the original value (with its visibility, language and annotation); the other parts come right after it, with the same visibility and language. Check the preview: a comma inside a name (“Smith, John”) is split too.'); ?></p>

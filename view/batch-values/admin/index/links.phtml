@@ -1,0 +1,97 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var string $token
+ * @var string $resourceType
+ * @var int $count
+ * @var array $issues
+ * @var array $thumbIds
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$bv = $this->plugin('batchValuesRender');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-check-page');
+$typeLabel = mb_strtolower($translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][0]));
+$typeController = \BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][1];
+$back = $this->url('admin/batch-values', ['action' => 'configure'], ['query' => ['token' => $token]]);
+$thumbs = $bv->thumbs($thumbIds, $resourceType);
+$editUrl = function ($id) use ($typeController) {
+    return $this->url('admin/id', ['controller' => $typeController, 'action' => 'edit', 'id' => (int) $id]);
+};
+?>
+<?php echo $this->pageTitle($translate('Links to check'), 1, $translate('Batch Values')); ?>
+
+<nav class="bv-breadcrumbs">
+    <?php echo $this->hyperlink($translate('Batch Values'), $this->url('admin/batch-values')); ?> ›
+    <?php echo $this->hyperlink($translate('2. What to do'), $back); ?> ›
+    <span><?php echo $translate('Links to check'); ?></span>
+</nav>
+
+<p class="bv-help"><?php echo sprintf($translate('Links of the %1$d selected %2$s that look wrong: an item linked to itself, and links that go one way only. Nothing is changed here.'), $count, $escape($typeLabel)); ?></p>
+
+<?php if (!$issues): ?>
+<p class="bv-note"><?php echo $translate('Nothing to report: no item links to itself, and every link of a field that is used both ways has its link back.'); ?></p>
+<?php else: ?>
+<?php echo $bv->peekAssets(); ?>
+<?php foreach ($issues as $propertyId => $issue): ?>
+<section class="bv-check-field">
+    <div class="bv-check-group">
+        <div class="bv-check-head">
+            <strong><?php echo $escape($issue['label']); ?></strong> <span class="bv-muted"><?php echo $escape($issue['term']); ?></span>
+        </div>
+
+        <?php if ($issue['self_total']): ?>
+        <div class="bv-cleanup-what">
+            <strong><?php echo $translate('Linked to itself'); ?></strong>
+            <span class="bv-muted"><?php echo sprintf($translate('%d value(s)'), $issue['self_total']); ?></span>
+            <div class="bv-muted"><?php echo $translate('The item is in its own field. It is never wanted, and it makes lists and pages link back to the same page.'); ?></div>
+            <?php echo $this->hyperlink($translate('Fix: remove these values'), $this->url('admin/batch-values', ['action' => 'links-fix'], ['query' => ['token' => $token, 'property' => $propertyId]]), ['class' => 'button bv-small-button']); ?>
+            <span class="bv-muted"><?php echo $translate('Opens the preview step; nothing is written yet.'); ?></span>
+        </div>
+        <table class="tablesaw bv-table" data-peek-list data-tablesaw-mode="stack">
+            <thead><tr><th><?php echo $escape(ucfirst($typeLabel)); ?></th><th></th></tr></thead>
+            <tbody>
+            <?php foreach ($issue['self'] as $row): ?>
+                <tr>
+                    <td><?php echo $bv->resourceLink($row['resource_id'], $row['title'], $resourceType, $thumbs); ?></td>
+                    <td><?php echo $this->hyperlink($translate('Edit'), $editUrl($row['resource_id']), ['target' => '_blank']); ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php if ($issue['self_total'] > count($issue['self'])): ?>
+        <p class="bv-muted"><?php echo sprintf($translate('The first %1$d of %2$d. “Fix” takes them all.'), count($issue['self']), $issue['self_total']); ?></p>
+        <?php endif; ?>
+        <?php endif; ?>
+
+        <?php if ($issue['one_way_total']): ?>
+        <details class="bv-cleanup-issue">
+            <summary><strong><?php echo $translate('Links that go one way only'); ?></strong>
+                <span class="bv-muted"><?php echo sprintf($translate('%1$d of them · %2$d links of this field do go both ways'), $issue['one_way_total'], $issue['mutual']); ?></span></summary>
+            <p class="bv-muted"><?php echo $translate('A links to B in this field, but B does not link back to A. Only fields that are used both ways somewhere are looked at. This is not always a mistake — it is shown so it can be judged item by item. Nothing here is fixed automatically: adding the link back is a different value in each item.'); ?></p>
+            <table class="tablesaw bv-table" data-peek-list data-tablesaw-mode="stack">
+                <thead><tr><th><?php echo $escape(ucfirst($typeLabel)); ?></th><th><?php echo $translate('Links to'); ?></th><th></th></tr></thead>
+                <tbody>
+                <?php foreach ($issue['one_way'] as $row): ?>
+                    <tr>
+                        <td><?php echo $bv->resourceLink($row['resource_id'], $row['title'], $resourceType, $thumbs); ?></td>
+                        <td><?php echo $bv->resourceLink($row['target_id'], $row['target_title'], 'items', $thumbs); ?></td>
+                        <td><?php echo $this->hyperlink($translate('Edit the one that is missing the link'), $editUrl($row['target_id']), ['target' => '_blank']); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php if ($issue['one_way_total'] > count($issue['one_way'])): ?>
+            <p class="bv-muted"><?php echo sprintf($translate('The first %1$d of %2$d.'), count($issue['one_way']), $issue['one_way_total']); ?></p>
+            <?php endif; ?>
+        </details>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endforeach; ?>
+<?php endif; ?>
+
+<div class="bv-actions">
+    <?php echo $this->hyperlink($translate('Back'), $back, ['class' => 'button']); ?>
+</div>

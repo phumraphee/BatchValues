@@ -1,0 +1,20 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+?>
+<?php if (!empty($presetValueIds)): ?>
+<div class="bv-note"><?php echo sprintf($translate('%d value(s) found by the check will be removed, exactly those. Nothing else in the field is touched.'), count($presetValueIds)); ?></div>
+<?php foreach ($presetValueIds as $valueId): ?><input type="hidden" name="value_ids[]" value="<?php echo (int) $valueId; ?>"><?php endforeach; ?>
+<?php else: ?>
+<?php echo $this->partial('common/bv-picker', ['allProperties' => $allProperties ?? false, 'matchTypes' => $matchTypes ?? [], 'presetTypes' => $presetTypes ?? [], 'distinct' => $distinct, 'required' => $required, 'showRequired' => true, 'noAll' => !empty($allProperties),
+    'pickerHelp' => $translate('These are the values the selected resources have for this property. Check the ones to remove.')]); ?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('Of the values chosen above, in each item'); ?></strong>
+    <label><input type="radio" name="position" value="all" checked> <?php echo $translate('Remove them all'); ?></label>
+    <label><input type="radio" name="position" value="keep_first"> <?php echo $translate('Keep the first N, remove the others'); ?></label>
+    <label><input type="radio" name="position" value="remove_first"> <?php echo $translate('Remove only the first N'); ?></label>
+    <label><input type="radio" name="position" value="remove_last"> <?php echo $translate('Remove only the last N'); ?></label>
+    <label>N = <input type="number" name="position_count" value="1" min="1" style="width:5em"></label>
+</div>
+<?php endif; ?>

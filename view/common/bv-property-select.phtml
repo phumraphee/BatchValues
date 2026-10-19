@@ -1,0 +1,58 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var string $name
+ * @var string $id
+ * @var array $propertyOptions
+ * @var int|null $selectedId
+ * @var bool $manyTemplates
+ * @var int|null $templateCount
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$templateCount = (int) ($templateCount ?? 0);
+// Only what is needed on the line: the label and the term. The template
+// names are added when the field is not in every template of the selection
+// (then knowing where it exists matters), at most two of them.
+$where = function (array $opt) use ($manyTemplates, $templateCount, $escape) {
+    if (empty($manyTemplates) || $templateCount < 2) {
+        return '';
+    }
+    $names = array_values(array_unique($opt['templates']));
+    if (count($names) >= $templateCount) {
+        return '';
+    }
+    $shown = array_slice($names, 0, 2);
+    $rest = count($names) - count($shown);
+    return ' (' . $escape(implode(', ', $shown)) . ($rest > 0 ? ' +' . $rest : '') . ')';
+};
+?>
+<select name="<?php echo $escapeAttr($name); ?>" id="<?php echo $escapeAttr($id); ?>" class="bv-chosen" data-placeholder="<?php echo $escapeAttr($translate('Select property…')); ?>">
+                <option value=""></option>
+                <?php if (!empty($withAll)): ?>
+                <option value="all" data-term="" class="bv-all-properties"<?php echo $selectedId === 'all' ? ' selected' : ''; ?>><?php echo $escape($translate('[All properties]')); ?></option>
+                <?php endif; ?>
+                
+                <?php if ($propertyOptions['template']): ?>
+                <optgroup label="<?php echo $escapeAttr($translate('In the templates of these resources')); ?>">
+                    <?php foreach ($propertyOptions['template'] as $opt): ?>
+                    <option value="<?php echo (int) $opt['id']; ?>" data-term="<?php echo $escapeAttr($opt['term']); ?>"<?php echo $selectedId === $opt['id'] ? ' selected' : ''; ?>><?php echo $escape($opt['label']); ?> — <?php echo $escape($opt['term']); ?><?php echo $where($opt); ?></option>
+                    <?php endforeach; ?>
+                </optgroup>
+                <?php endif; ?>
+                <?php if (!empty($propertyOptions['with_values'])): ?>
+                <optgroup label="<?php echo $escapeAttr($translate('Other fields these resources have values in')); ?>">
+                    <?php foreach ($propertyOptions['with_values'] as $opt): ?>
+                    <option value="<?php echo (int) $opt['id']; ?>" data-term="<?php echo $escapeAttr($opt['term']); ?>"<?php echo $selectedId === $opt['id'] ? ' selected' : ''; ?>><?php echo $escape($translate($opt['label'])); ?> — <?php echo $escape($opt['term']); ?></option>
+                    <?php endforeach; ?>
+                </optgroup>
+                <?php endif; ?>
+                <?php foreach ($propertyOptions['vocabularies'] as $vocabLabel => $opts): ?>
+                <optgroup label="<?php echo $escapeAttr($translate($vocabLabel)); ?>">
+                    <?php foreach ($opts as $opt): ?>
+                    <option value="<?php echo (int) $opt['id']; ?>" data-term="<?php echo $escapeAttr($opt['term']); ?>"<?php echo $selectedId === $opt['id'] ? ' selected' : ''; ?>><?php echo $escape($translate($opt['label'])); ?> — <?php echo $escape($opt['term']); ?></option>
+                    <?php endforeach; ?>
+                </optgroup>
+                <?php endforeach; ?>
+            </select>

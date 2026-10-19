@@ -1,0 +1,170 @@
+<?php
+/**
+ * Inputs grouped by resource template, each with the data types the template
+ * defines for the property.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array $groups
+ * @var array $dataTypeNames
+ * @var bool $single One value per group (replace).
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$bv = $this->plugin('batchValuesRender');
+$single = !empty($single);
+?>
+<?php
+// Data types needed by the groups: the template's ones, or any for groups
+// without restriction.
+$needed = [];
+$anyTypes = false;
+foreach ($groups as $group) {
+    if ($group['has_property'] && $group['data_types']) {
+        $needed = array_merge($needed, $group['data_types']);
+    } else {
+        $anyTypes = true;
+    }
+}
+if ($anyTypes) {
+    $needed = array_merge($needed, $dataTypeNames);
+}
+$dataTypeHelper = $this->dataType();
+$needed = array_values(array_unique(array_filter($needed, function ($name) use ($dataTypeHelper) {
+    return (bool) $dataTypeHelper->getDataType($name);
+})));
+foreach ($needed as $name) {
+    $dataTypeHelper->getDataType($name)->prepareForm($this);
+}
+// Value Suggest loads its scripts on the item edit page only (listener, not
+// prepareForm()): ask it for them here too when one of its types is used.
+if (array_filter($needed, [\BatchValues\Stdlib\Planner::class, 'isValueSuggest'])) {
+    $vsModule = $this->getHelperPluginManager()->getServiceLocator()->get('Omeka\ModuleManager')->getModule('ValueSuggest');
+    if ($vsModule && $vsModule->getState() === \Omeka\Module\Manager::STATE_ACTIVE) {
+        $vsInstance = class_exists('ValueSuggest\\Module') ? new \ValueSuggest\Module : null;
+        if ($vsInstance && method_exists($vsInstance, 'prepareResourceForm')) {
+            $vsInstance->prepareResourceForm(new \Laminas\EventManager\Event('batchvalues.form', $this));
+        }
+    }
+}
+$typeOptions = function (array $names) use ($bv, $escapeAttr, $escape) {
+    $html = '';
+    foreach ($names as $name) {
+        $html .= '<option value="' . $escapeAttr($name) . '">' . $escape($bv->typeLabel($name)) . '</option>';
+    }
+    return $html;
+};
+?>
+<div class="bv-typed-groups" data-single="<?php echo $single ? '1' : '0'; ?>"
+    data-search-url="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => 'search-resource'])); ?>"
+    data-i18n="<?php echo $escapeAttr(json_encode([
+        'private' => $translate('Private'),
+        'makePrivate' => $translate('Public — click to make this value private'),
+        'makePublic' => $translate('Private — click to make this value public'),
+        'search' => $translate('Search by title or id…'),
+        'noResult' => $translate('No result'),
+        'remove' => $translate('Remove'),
+    ])); ?>">
+<input type="hidden" name="groups_json" value="">
+    <?php
+    // One input for all templates when one data type suits them all: the
+    // types every restricting template accepts (a template that does not
+    // restrict accepts any).
+    $common = null;
+    foreach ($groups as $group) {
+        if ($group['has_property'] && $group['data_types']) {
+            $common = $common === null ? $group['data_types'] : array_values(array_intersect($common, $group['data_types']));
+        }
+    }
+    $common = array_values(array_intersect($common ?? $needed, $needed));
+    $langs = array_unique(array_map(function ($g) { return (string) $g['default_lang']; }, $groups));
+    $allPrivate = !array_filter($groups, function ($g) { return !$g['is_private']; });
+    $many = count($groups) > 1;
+    ?>
+    <?php if ($many && $common): ?>
+    <label class="bv-separately"><input type="checkbox" class="bv-separately-input"> <?php echo $translate('Enter values separately for each template'); ?>
+        <span class="bv-muted"><?php echo $translate('(only when the templates need different values)'); ?></span></label>
+<?php $largest = $groups; uasort($largest, function ($a, $b) { return $b['count'] <=> $a['count']; }); $largest = reset($largest); ?>
+    <section class="bv-group bv-group-all" data-key="__all" data-template-id="<?php echo (int) $largest['template_id']; ?>"
+        data-types="<?php echo $escapeAttr(json_encode($common)); ?>"
+        data-default-type="<?php echo $escapeAttr(in_array('literal', $common, true) ? 'literal' : $common[0]); ?>"
+        data-default-lang="<?php echo $escapeAttr(count($langs) === 1 ? reset($langs) : ''); ?>"
+        data-default-public="<?php echo $allPrivate ? '0' : '1'; ?>">
+        <div class="bv-group-head">
+            <h4><?php echo $translate('All templates'); ?>
+                <span class="bv-badge"><?php echo sprintf($translate('%d items'), array_sum(array_column($groups, 'count'))); ?></span></h4>
+            <div class="bv-group-meta"><span><?php echo $translate('Data type:'); ?> <?php echo $escape(implode(', ', array_map([$bv, 'typeLabel'], $common))); ?></span></div>
+        </div>
+        <div class="bv-group-body">
+            <div class="bv-type-row"<?php echo count($common) < 2 ? ' hidden' : ''; ?>>
+                <label><?php echo $translate('Data type'); ?>
+                    <select class="bv-type-select"><?php echo $typeOptions($common); ?></select>
+                </label>
+            </div>
+            <div class="field bv-vs-field" data-property-id="<?php echo (int) ($propertyId ?? 0); ?>"><div class="bv-values"></div></div>
+            <div class="bv-group-footer">
+                <?php if (!$single): ?><a href="#" class="button bv-add-another o-icon-add"><?php echo $translate('Add another value'); ?></a><?php else: ?><span></span><?php endif; ?>
+            </div>
+        </div>
+    </section>
+    <?php elseif ($many): ?>
+    <p class="bv-note"><?php echo $translate('The templates expect different data types for this property, so the value is entered for each template.'); ?></p>
+    <?php endif; ?>
+    <div class="bv-groups-separate"<?php echo ($many && $common) ? ' hidden' : ''; ?>>
+    <?php foreach ($groups as $key => $group): ?>
+    <?php
+    $restricted = $group['has_property'] && $group['data_types'];
+    $types = $restricted ? array_values(array_intersect($group['data_types'], $needed)) : $needed;
+    $defaultType = $restricted ? ($types[0] ?? null) : (in_array('literal', $types) ? 'literal' : ($types[0] ?? null));
+    ?>
+    <section class="bv-group" data-key="<?php echo $escapeAttr($key); ?>" data-template-id="<?php echo (int) $group['template_id']; ?>"
+        data-types="<?php echo $escapeAttr(json_encode($types)); ?>"
+        data-default-type="<?php echo $escapeAttr($defaultType); ?>"
+        data-default-lang="<?php echo $escapeAttr((string) $group['default_lang']); ?>"
+        data-default-public="<?php echo $group['is_private'] ? '0' : '1'; ?>">
+        <div class="bv-group-head">
+            <h4>
+                <?php echo $group['template_label'] !== null ? $escape($group['template_label']) : '<em>' . $escape($translate('No template')) . '</em>'; ?>
+                <span class="bv-badge"><?php echo sprintf($translate('%d items'), $group['count']); ?></span>
+            </h4>
+            <div class="bv-group-meta">
+                <?php if ($group['template_id'] && !$group['has_property']): ?>
+                    <span class="bv-note"><?php echo $translate('This template does not include this property: any data type can be used.'); ?></span>
+                <?php elseif ($restricted): ?>
+                    <?php if ($group['alternate_label']): ?><span><?php echo sprintf($translate('Label in template: %s'), $escape($group['alternate_label'])); ?></span><?php endif; ?>
+                    <span><?php echo $translate('Data type:'); ?> <?php echo $escape(implode(', ', array_map([$bv, 'typeLabel'], $group['data_types']))); ?></span>
+                <?php elseif ($group['template_id']): ?>
+                    <span><?php echo $translate('The template does not restrict the data type.'); ?></span>
+                <?php endif; ?>
+            </div>
+            <label class="bv-skip"><input type="checkbox" class="bv-skip-input"> <?php echo $single ? $translate('Leave this group as it is') : $translate('Do not add anything to this group'); ?></label>
+        </div>
+        <div class="bv-group-body">
+            <?php if (!$types): ?>
+                <p class="bv-note"><?php echo $translate('None of the data types defined by the template is available (module missing?). This group will be skipped.'); ?></p>
+            <?php else: ?>
+            <div class="bv-type-row"<?php echo count($types) < 2 ? ' hidden' : ''; ?>>
+                <label><?php echo $translate('Data type'); ?>
+                    <select class="bv-type-select"><?php echo $typeOptions($types); ?></select>
+                </label>
+            </div>
+            <div class="field bv-vs-field" data-property-id="<?php echo (int) ($propertyId ?? 0); ?>"><div class="bv-values"></div></div>
+            <div class="bv-group-footer">
+                <?php if (!$single): ?><a href="#" class="button bv-add-another o-icon-add"><?php echo $translate('Add another value'); ?></a><?php else: ?><span></span><?php endif; ?>
+
+            </div>
+            <?php endif; ?>
+        </div>
+    </section>
+    <?php endforeach; ?>
+    </div>
+
+    <?php // Value Suggest reads the template of the item being edited from this select. ?>
+    <select id="resource-template-select" hidden aria-hidden="true" tabindex="-1"><option value=""></option><?php foreach ($groups as $group): ?><?php if ($group['template_id']): ?><option value="<?php echo (int) $group['template_id']; ?>"><?php echo (int) $group['template_id']; ?></option><?php endif; ?><?php endforeach; ?></select>
+    <div id="bv-templates" hidden>
+        <?php foreach ($needed as $name): ?>
+            <?php echo $this->partial('common/data-type-wrapper', ['dataType' => $name]); ?>
+        <?php endforeach; ?>
+    </div>
+
+</div>

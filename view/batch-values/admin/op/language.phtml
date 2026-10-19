@@ -1,0 +1,26 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$languages = $languages ?? [];
+?>
+<div class="bv-radios bv-mode-choice bv-switch" data-switch="lang_mode">
+    <strong><?php echo $translate('Which values'); ?></strong>
+    <label><input type="radio" name="lang_mode" value="chosen" checked> <?php echo $translate('The values I check in the list below'); ?></label>
+    <label><input type="radio" name="lang_mode" value="code"<?php echo $languages ? '' : ' disabled'; ?>> <?php echo $translate('Every value with the language code'); ?>
+        <select name="from_lang">
+            <?php foreach ($languages as $code => $n): ?>
+            <option value="<?php echo $escapeAttr($code === '' ? '(none)' : $code); ?>"><?php echo $escape($code === '' ? $translate('(no language)') : $code); ?> — <?php echo sprintf($translate('%d values'), $n); ?></option>
+            <?php endforeach; ?>
+        </select>
+    </label>
+</div>
+<div data-switch-show="lang_mode=chosen">
+<?php echo $this->partial('common/bv-picker', ['allProperties' => $allProperties ?? false, 'matchTypes' => $matchTypes ?? [], 'presetTypes' => $presetTypes ?? [], 'distinct' => $distinct, 'required' => []]); ?>
+</div>
+<div class="bv-inline-choice">
+    <label><strong><?php echo $translate('New language code'); ?></strong>
+        <input type="text" name="lang" list="bv-langs" size="10" placeholder="th, en…"></label>
+    <datalist id="bv-langs"><option value="th"><option value="en"><option value="zh"><option value="fr"><option value="ja"></datalist>
+    <span class="bv-muted"><?php echo $translate('Leave empty to remove the language. Only Text, URI and Value Suggest values have one. Example: change “tha” and “TH” to “th”.'); ?></span>
+</div>

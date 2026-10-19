@@ -1,0 +1,16 @@
+<?php
+$translate = $this->plugin('translate');
+?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('New order'); ?></strong>
+    <label><input type="radio" name="order_by" value="source" checked> <?php echo $translate('By file name, A → Z (page-2 before page-10)'); ?></label>
+    <label><input type="radio" name="order_by" value="title"> <?php echo $translate('By title, A → Z'); ?></label>
+    <label><input type="radio" name="order_by" value="media_type"> <?php echo $translate('By media type (image/jpeg, application/pdf…)'); ?></label>
+    <label><input type="radio" name="order_by" value="extension"> <?php echo $translate('By file extension (jpg, pdf, tif…)'); ?></label>
+    <label><input type="radio" name="order_by" value="images_first"> <?php echo $translate('Images first, then the other files (PDF, video…)'); ?></label>
+    <label><input type="radio" name="order_by" value="kinds_first"> <?php echo $translate('The kinds ticked below first, the others after'); ?></label>
+    <label><input type="radio" name="order_by" value="kinds_last"> <?php echo $translate('The kinds ticked below last'); ?></label>
+    <label><input type="radio" name="order_by" value="reverse"> <?php echo $translate('Reverse the current order'); ?></label>
+</div>
+<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds, 'kindsHelp' => $translate('Kinds of media (for “first” or “last”)')]); ?>
+<p class="bv-muted"><?php echo $translate('Media that are equal for the order chosen keep their current order. The first media gives the item its thumbnail (unless the item has its own). Nothing else about the media changes. Cancelling puts the old order back.'); ?></p>

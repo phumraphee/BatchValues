@@ -1,0 +1,17 @@
+<?php
+$translate = $this->plugin('translate');
+?>
+<h4><?php echo $translate('1. Values'); ?></h4>
+<?php echo $this->partial('common/bv-picker', ['allProperties' => $allProperties ?? false, 'matchTypes' => $matchTypes ?? [], 'presetTypes' => $presetTypes ?? [], 'distinct' => $distinct, 'required' => []]); ?>
+<h4><?php echo $translate('2. Text to add'); ?></h4>
+<div class="bv-text-fields">
+    <label><strong><?php echo $translate('Before'); ?></strong>
+        <input type="text" name="prefix" autocomplete="off" class="bv-keep-spaces"></label>
+    <label><strong><?php echo $translate('After'); ?></strong>
+        <input type="text" name="suffix" autocomplete="off" class="bv-keep-spaces"></label>
+</div>
+<p class="bv-example"><?php echo $translate('Example: before “c. ” (with a space): “1961” → “c. 1961”. Spaces count: type the space if you want one.'); ?></p>
+<div class="bv-checks">
+    <label><input type="checkbox" name="skip_present" value="1" checked> <?php echo $translate('Skip a value that already starts or ends with this text (so running it twice does no harm)'); ?></label>
+</div>
+<?php echo $this->partial('common/bv-link-part', ['fieldNow' => $fieldNow ?? []]); ?>

@@ -1,0 +1,71 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array $set
+ * @var array $changes
+ * @var int $total
+ * @var array|null $changeIds
+ * @var array $live Value rows still in the base, by id (0.8.0).
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$bv = $this->plugin('batchValuesRender');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-cancel-page');
+?>
+<?php echo $this->pageTitle(sprintf($translate('Cancel changes of #%d'), $set['id']), 1, $translate('Batch Values')); ?>
+
+<nav class="bv-breadcrumbs">
+    <?php echo $this->hyperlink($translate('Batch Values'), $this->url('admin/batch-values')); ?> ›
+    <?php echo $this->hyperlink('#' . $set['id'], $this->url('admin/batch-values', ['action' => 'show', 'id' => $set['id']])); ?> ›
+    <span><?php echo $translate('Cancel'); ?></span>
+</nav>
+
+<?php if (!$total): ?>
+    <p class="bv-note"><?php echo $translate('Nothing left to cancel: these changes were already cancelled.'); ?></p>
+<?php else: ?>
+<div class="bv-summary">
+    <p class="bv-big"><?php echo sprintf($translate('%d changes will be reversed.'), $total); ?></p>
+    <p class="bv-help"><?php echo $translate('Added values are removed, removed values are put back, changed values and resources are set back as they were. Where something has changed since, it is skipped. The original log is kept; the cancellation is logged as a new entry and can itself be cancelled.'); ?></p>
+</div>
+
+<?php $thumbs = $bv->thumbs(array_column($changes, 'resource_id'), $set['resource_type'] ?: 'items'); ?>
+<?php echo $bv->peekAssets(); ?>
+<table class="tablesaw bv-table bv-changes" data-peek-list data-tablesaw-mode="stack">
+    <thead><tr>
+        <th><?php echo $translate('Resource'); ?></th>
+        <th><?php echo $translate('Original change'); ?></th>
+        <th><?php echo $translate('Change that will be reversed'); ?></th>
+    </tr></thead>
+    <tbody>
+    <?php foreach ($changes as $change): ?>
+        <tr>
+            <td><?php echo $bv->resourceLink((int) $change['resource_id'], $change['resource_title'], $set['resource_type'] ?: 'items', $thumbs); ?></td>
+            <td><?php echo $escape($bv->outcomeLabel($change['outcome'])); ?></td>
+            <td>
+                <?php $grids = $bv->gridsOf($change, $live ?? [], $current ?? []); ?>
+                <?php if ($grids !== null): ?>
+                    <?php echo $grids; ?>
+                <?php else: ?>
+                <?php echo $bv->changeHtml($change); ?>
+                <?php endif; ?>
+            </td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+<?php if ($total > count($changes)): ?><p class="bv-muted"><?php echo sprintf($translate('… and %d more.'), $total - count($changes)); ?></p><?php endif; ?>
+
+<form method="post" class="bv-form disable-unsaved-warning" action="<?php echo $escapeAttr($this->url('admin/batch-values', ['action' => 'cancel', 'id' => $set['id']])); ?>">
+    <?php echo $this->formHidden($csrf); ?>
+    <input type="hidden" name="confirm" value="1">
+    <?php if ($changeIds !== null): ?>
+        <?php foreach ($changeIds as $cid): ?><input type="hidden" name="change_ids[]" value="<?php echo (int) $cid; ?>"><?php endforeach; ?>
+    <?php endif; ?>
+    <div class="bv-actions">
+        <button type="submit" class="button"><?php echo $translate('Confirm cancellation'); ?></button>
+        <?php echo $this->hyperlink($translate('Back'), $this->url('admin/batch-values', ['action' => 'show', 'id' => $set['id']]), ['class' => 'button']); ?>
+    </div>
+</form>
+<?php endif; ?>

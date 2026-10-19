@@ -1,0 +1,133 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var string $token
+ * @var string $resourceType
+ * @var int $count
+ * @var array $found
+ * @var array $titles
+ */
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$bv = $this->plugin('batchValuesRender');
+$this->headLink()->appendStylesheet($this->assetUrl('css/batch-values.css', 'BatchValues'));
+$this->htmlElement('body')->appendAttribute('class', 'batch-values bv-check-page');
+$typeLabel = mb_strtolower($translate(\BatchValues\Stdlib\Planner::RESOURCE_TYPES[$resourceType][0]));
+$back = $this->url('admin/batch-values', ['action' => 'configure'], ['query' => ['token' => $token]]);
+$clean = $bv->operation('clean');
+$thumbs = $bv->thumbs(array_keys($titles), $resourceType);
+$labels = [
+    'trim' => ['Spaces at the start and end', '“ Bangkok ” → “Bangkok”'],
+    'duplicates' => ['The same value entered twice in one item', 'Bangkok, Bangkok → Bangkok'],
+    'empty' => ['Empty values (only spaces)', '“ ” → removed'],
+    'collapse' => ['Double spaces inside the text', '“New  York” → “New York”'],
+    'invisible' => ['Invisible characters (ZWSP, BOM, WJ)', 'often pasted from Word or websites'],
+    'nbsp' => ['Non-breaking spaces (NBSP)', 'look like spaces'],
+    'duplicates_case' => ['The same value twice, apart from upper and lower case', 'Bangkok, bangkok'],
+    'mojibake' => ['Garbled characters from a wrong import', '“CafÃ©” → “Café”'],
+    'resource_type' => ['Linked resources saved with the general data type “Resource”', 'technical, not visible on the site'],
+    'nulls' => ['Language (or text, URL) stored as “empty” instead of “none”', 'technical, not visible on the site'],
+];
+// What each problem is, for people who are not programmers.
+$explain = [
+    'trim' => 'A space (or a line break) before the first word or after the last one. Nobody sees it on the site, but the value no longer matches the same value typed without it: it is counted as a different value, and searches for the exact value miss it.',
+    'duplicates' => 'The same value twice in one field of one item. The site shows it twice.',
+    'empty' => 'A value that holds only spaces. It shows as an empty line.',
+    'collapse' => 'Two spaces or more between words, usually a typing slip. The site shows one space, but the value differs from the same text typed with one space.',
+    'invisible' => 'Characters that take no room on the page: ZWSP (zero-width space), BOM (byte order mark), WJ (word joiner). They come with text copied from Word, PDF or websites. They split a word in two for the computer, so a search for that word, or an exact match, fails. Some Thai typing tools put ZWSP between words to show where a line may break; current browsers find those places in Thai text by themselves, so removing them does not change how the text reads. Untick this if a ZWSP was put on purpose.',
+    'nbsp' => 'NBSP (non-breaking space) looks exactly like a space, but keeps the two words beside it on the same line, and a search typed with a normal space does not find it. It usually comes with text copied from Word or websites. It is sometimes put on purpose, for example between a number and its unit (10 cm) or in a name that must not be cut: then untick this.',
+    'duplicates_case' => 'The same value twice, once with capitals and once without (Bangkok, bangkok). It may be on purpose: check before fixing. The first one stays.',
+    'mojibake' => 'Text that was read with the wrong encoding during an import: “Café” saved as “CafÃ©”, Thai as “à¸…”. The original characters are put back. Correct text is never touched.',
+    'resource_type' => 'A link to another item saved with the general data type “Omeka resource” instead of “Item” (or “Item set”, “Media”). The site shows it the same way. But a resource template that asks for “Item” counts it as the wrong data type (see “Check data types”), and a search by data type misses it. The fix sets the precise data type, when the template allows it.',
+    'nulls' => 'For a value without language, the database can hold “none” (as the Omeka form saves it) or an empty text “” (usually left by an import or another module). Both look the same everywhere on the site. The difference shows only in tools that read the database directly, which may list “” as a language of its own. The fix stores “none”, as Omeka does. The same for an empty text or URL beside a link.',
+];
+// Text with what cannot be seen made visible: spaces kept, special
+// characters named.
+$show = function (?string $text) use ($escape) {
+    $html = $escape((string) $text);
+    $html = strtr($html, [
+        "\u{00A0}" => '<span class="bv-char">NBSP</span>',
+        "\u{200B}" => '<span class="bv-char">ZWSP</span>',
+        "\u{FEFF}" => '<span class="bv-char">BOM</span>',
+        "\u{2060}" => '<span class="bv-char">WJ</span>',
+        "\t" => '<span class="bv-char">TAB</span>',
+        "\n" => '<span class="bv-char">↵</span>',
+    ]);
+    return '<span class="bv-keep-spaces">“' . $html . '”</span>';
+};
+$text = function (array $row) {
+    return \BatchValues\Stdlib\Planner::hasLink($row) && $row['value'] === null ? (string) $row['uri'] : (string) $row['value'];
+};
+?>
+<?php echo $this->pageTitle($translate('Values to clean up'), 1, $translate('Batch Values')); ?>
+
+<nav class="bv-breadcrumbs">
+    <?php echo $this->hyperlink($translate('Batch Values'), $this->url('admin/batch-values')); ?> ›
+    <?php echo $this->hyperlink($translate('2. What to do'), $back); ?> ›
+    <span><?php echo $translate('Values to clean up'); ?></span>
+</nav>
+
+<p class="bv-help"><?php echo sprintf($translate('Every field of the %1$d selected %2$s, checked for what “Clean up spaces and duplicates” can fix. Nothing is changed here.'), $count, $escape($typeLabel)); ?></p>
+<p class="bv-help"><?php echo $translate('“Fix” takes only the items concerned and opens “Clean up” for that field with only the problems found ticked: untick what should stay, then check the preview before anything is written. For values entered twice, “Choose the copies” shows each field in its order and lets you pick the copy to keep in each item.'); ?></p>
+
+<?php if (!$found): ?>
+<p class="bv-note"><?php echo $translate('Nothing to clean up.'); ?></p>
+<?php else: ?>
+<div class="bv-actions">
+    <?php echo $this->hyperlink($translate('Fix everything found, in every field'), $this->url('admin/batch-values', ['action' => 'cleanup-fix'], ['query' => ['token' => $token, 'property' => 'all']]), ['class' => 'button']); ?>
+    <span class="bv-muted"><?php echo $translate('Opens Clean up with “All properties”; the preview comes first.'); ?></span>
+</div>
+<?php echo $bv->peekAssets(); ?>
+<?php foreach ($found as $propertyId => $f): ?>
+<section class="bv-check-field">
+    <div class="bv-check-group">
+        <div class="bv-check-head">
+            <strong><?php echo $escape($f['label']); ?></strong> <span class="bv-muted"><?php echo $escape($f['term']); ?></span>
+            <?php echo $this->hyperlink($translate('Fix these'), $this->url('admin/batch-values', ['action' => 'cleanup-fix'], ['query' => ['token' => $token, 'property' => $propertyId]]), ['class' => 'button bv-small-button']); ?>
+        </div>
+        <?php foreach ($f['issues'] as $option => $issue): ?>
+        <details class="bv-cleanup-issue">
+            <summary>
+                <span class="bv-cleanup-what"><strong><?php echo $escape($translate($labels[$option][0])); ?></strong>
+                <span class="bv-example-inline"><?php echo $escape($labels[$option][1]); ?></span></span>
+                <span class="bv-cleanup-n"><?php echo sprintf($translate('%1$d values on %2$d %3$s'), $issue['values'], count($issue['resource_ids']), $escape($typeLabel)); ?></span>
+                <span class="bv-cleanup-open"><?php echo $translate('Examples'); ?></span>
+            </summary>
+            <p class="bv-explain"><?php echo $escape($translate($explain[$option])); ?></p>
+            <ul class="bv-cleanup-samples" data-peek-list>
+            <?php foreach ($issue['samples'] as $sample): $row = $sample['row']; ?>
+                <li>
+                    <span class="bv-cleanup-res"><?php echo $bv->resourceLink($sample['resource_id'], $titles[$sample['resource_id']] ?? null, $resourceType, $thumbs); ?></span>
+                    <span class="bv-cleanup-val">
+                    <?php if (in_array($option, ['trim', 'collapse', 'invisible', 'nbsp', 'mojibake'], true) && $clean): ?>
+                        <?php [$nowHtml, $afterHtml] = $bv->marked($text($row), $clean->cleanText($text($row), [$option => true, 'nbsp' => $option === 'nbsp']), $escape, 40, true); ?>
+                        <div class="bv-ba bv-ba-compact"><div class="bv-b"><span class="bv-cap"><?php echo $translate('Now'); ?></span><?php echo $nowHtml; ?></div><div class="bv-a"><span class="bv-cap"><?php echo $translate('After the fix'); ?></span><?php echo $afterHtml; ?></div></div>
+                    <?php elseif ($option === 'empty'): ?>
+                        <?php echo $show($text($row)); ?> → <em><?php echo $translate('removed'); ?></em>
+                    <?php elseif ($option === 'nulls'): ?>
+                        <?php echo $bv(\BatchValues\Stdlib\Planner::snapshotFromRow($row)); ?>
+                        <div class="bv-what"><?php echo $escape(implode(' · ', array_map(function ($w) use ($translate) { return sprintf($translate('%s: empty text “” → none'), $translate($w)); }, array_keys(array_filter(['Language' => $row['lang'] === '', 'Text' => $row['value'] === '', 'URL' => $row['uri'] === '']))))); ?></div>
+                    <?php elseif ($option === 'resource_type'): ?>
+                        <?php echo $bv(\BatchValues\Stdlib\Planner::snapshotFromRow($row)); ?>
+                        <div class="bv-what"><?php echo $translate('Data type: Omeka resource → Item, Item set or Media, as the linked resource is (when the template allows it)'); ?></div>
+                    <?php else: ?>
+                        <?php echo $bv(\BatchValues\Stdlib\Planner::snapshotFromRow($row)); ?>
+                    <?php endif; ?>
+                    </span>
+                </li>
+            <?php endforeach; ?>
+            </ul>
+            <?php if ($issue['values'] > count($issue['samples'])): ?>
+            <p class="bv-muted"><?php echo sprintf($translate('The first %1$d of %2$d.'), count($issue['samples']), $issue['values']); ?></p>
+            <?php endif; ?>
+            <?php if ($option === 'duplicates'): ?>
+            <p><?php echo $this->hyperlink($translate('Choose the copy to keep in each item'), $this->url('admin/batch-values', ['action' => 'duplicates'], ['query' => ['token' => $token]])); ?></p>
+            <?php endif; ?>
+        </details>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endforeach; ?>
+<?php endif; ?>
+
+<div class="bv-actions"><?php echo $this->hyperlink($translate('Back'), $back, ['class' => 'button']); ?></div>

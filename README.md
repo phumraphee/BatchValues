@@ -101,7 +101,10 @@ twice · values to clean up · links to check · accession numbers (see Settings
   actions menu. Omeka's own batch edit stays reachable from Batch Values' second step.
 - **When an item is saved** — remove spaces at the start and end of values, and do not save the
   same value twice (both off by default) · ask before saving and before leaving the add and edit
-  form (on) · buttons to sort and move values on the edit form, written to the log (on) · save a
+  form (on; the question names the fields a person changed — what other widgets fill in by
+  themselves is not counted — and is left to
+  [Revision History](https://github.com/phumraphee/RevisionHistory) when that module is on and
+  asks before saving) · buttons to sort and move values on the edit form, written to the log (on) · save a
   link with its exact data type, `resource:item` rather than `resource` (on).
 - **Accession numbers** — the field that holds them, the shapes they are written in (one regular
   expression per line with a group named `serial`, then ` | ` and the groups the serial counts

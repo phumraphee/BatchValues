@@ -139,23 +139,169 @@
         return Math.max(1, Math.round(bytes / 1024)) + ' KB';
     };
 
-    var baseline = null;
-    var changedFields = function () {
-        if (baseline === null) {
-            return 0;
+    // ------------------------------------------------------------------
+    // Which fields were changed, by a person (1.0.1).
+    //
+    // The form is read field by field: a property with all its values, or
+    // one named field (template, class, item sets…). A field counts only when
+    // a person worked in it — pressed, typed or picked in it — and it now
+    // differs from what it held just before they first did. The widgets that
+    // fill inputs of their own once the page is drawn (Chosen, Value Suggest
+    // and the like, some of them only after an answer from the server) never
+    // press or type, so what they fill is never counted, however late.
+    // ------------------------------------------------------------------
+    var fieldKey = function (el) {
+        var prop = el.closest ? el.closest('.resource-property') : null;
+        if (prop) {
+            return 'p:' + (prop.getAttribute('data-property-term') || '');
         }
-        var now = state();
-        if (now.length !== baseline.length) {
-            return Math.abs(now.length - baseline.length);
-        }
-        var n = 0;
-        for (var i = 0; i < now.length; i++) {
-            if (now[i] !== baseline[i]) {
-                n++;
+        return el.name ? 'n:' + el.name.replace(/\[\d+\]/g, '[]') : null;
+    };
+    var fieldName = function (key) {
+        var el = null;
+        if (key.indexOf('p:') === 0) {
+            var props = form.querySelectorAll('.resource-property');
+            for (var i = 0; i < props.length; i++) {
+                if ('p:' + (props[i].getAttribute('data-property-term') || '') === key) {
+                    var labels = props[i].querySelectorAll('.field-label');
+                    el = labels.length ? labels[labels.length - 1] : null;
+                    break;
+                }
+            }
+        } else {
+            var named = fields().concat(Array.prototype.slice.call(form.querySelectorAll('[name]')));
+            for (var j = 0; j < named.length; j++) {
+                if (fieldKey(named[j]) === key) {
+                    var fld = named[j].closest('.field');
+                    el = fld ? fld.querySelector('.field-meta label, .field-meta .field-label') : null;
+                    break;
+                }
             }
         }
-        return n;
+        var text = el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+        return text || key.slice(2);
     };
+    var snapshot = function () {
+        var out = {};
+        var add = function (key, part) {
+            out[key] = (out[key] === undefined ? '' : out[key] + '\u0001') + part;
+        };
+        fields().forEach(function (el) {
+            if (el.type === 'file' || el.closest('.resource-property')) {
+                return;
+            }
+            add(fieldKey(el), String(el.value == null ? '' : el.value));
+        });
+        valueInputs().forEach(function (el) {
+            var block = el.closest ? el.closest('.value') : null;
+            add(fieldKey(el) || 'p:', String(el.getAttribute('data-value-key')) + '='
+                + String(el.value == null ? '' : el.value)
+                + (block && block.classList.contains('delete') ? '|deleted' : ''));
+        });
+        // The eye of each value keeps its state in an input of its own,
+        // without data-value-key.
+        Array.prototype.forEach.call(form.querySelectorAll('.resource-property .value input.is_public'), function (el) {
+            add(fieldKey(el) || 'p:', 'public=' + String(el.value == null ? '' : el.value));
+        });
+        return out;
+    };
+    // Field key => what it held just before a person first worked in it.
+    var before = {};
+    // Field key => true once a person worked in it.
+    var touched = {};
+    var touch = function (e, valueAlreadyChanged) {
+        if (!e.isTrusted || !form || !e.target || !e.target.closest) {
+            return;
+        }
+        var box = e.target.closest('.resource-property, .field');
+        var keys = [];
+        if (box && box.classList.contains('resource-property')) {
+            keys.push(fieldKey(box));
+        } else if (box) {
+            Array.prototype.forEach.call(box.querySelectorAll('[name]'), function (el) {
+                keys.push(fieldKey(el));
+            });
+        } else if (e.target.name) {
+            keys.push(fieldKey(e.target));
+        }
+        keys = keys.filter(function (k) {
+            return k && !touched[k];
+        });
+        if (!keys.length) {
+            return;
+        }
+        // Everything nobody has worked in yet is taken as it is now: what
+        // the widgets filled up to this moment is not the person's doing.
+        var now = snapshot();
+        Object.keys(now).forEach(function (k) {
+            if (!touched[k] && !(valueAlreadyChanged && keys.indexOf(k) !== -1)) {
+                before[k] = now[k];
+            }
+        });
+        keys.forEach(function (k) {
+            touched[k] = true;
+            if (before[k] === undefined) {
+                if (valueAlreadyChanged) {
+                    before[k] = baseline[k] === undefined ? '' : baseline[k];
+                } else {
+                    before[k] = now[k] === undefined ? '' : now[k];
+                }
+            }
+        });
+    };
+    if (form) {
+        // Pressing and typing come before the change they make; input and
+        // change come after it, so they keep what was taken before.
+        form.addEventListener('pointerdown', function (e) { touch(e, false); }, true);
+        form.addEventListener('mousedown', function (e) { touch(e, false); }, true);
+        form.addEventListener('keydown', function (e) { touch(e, false); }, true);
+        form.addEventListener('input', function (e) { touch(e, true); }, true);
+        form.addEventListener('change', function (e) { touch(e, true); }, true);
+    }
+    var toolsUsed = function () {
+        try {
+            return ((window.batchValuesFormDone && window.batchValuesFormDone()) || []).length > 0;
+        } catch (err) {
+            return false;
+        }
+    };
+    // The names of the fields a person changed, in the order of the page.
+    var changedList = function () {
+        if (!form) {
+            return [];
+        }
+        var now = snapshot();
+        var keys = Object.keys(now);
+        Object.keys(before).forEach(function (k) {
+            if (now[k] === undefined) {
+                keys.push(k);
+            }
+        });
+        // The buttons of this module change fields with a script of their
+        // own; when they were used, every field that moved counts.
+        var all = toolsUsed();
+        return keys.filter(function (k) {
+            if (!touched[k] && !all) {
+                return false;
+            }
+            var was = before[k] === undefined ? (all ? baseline[k] : undefined) : before[k];
+            return was !== undefined && was !== (now[k] === undefined ? '' : now[k]);
+        }).map(fieldName);
+    };
+    var changedFields = function () {
+        return changedList().length;
+    };
+    var changesNote = function () {
+        var names = changedList();
+        if (!names.length) {
+            return attr('data-changes-none');
+        }
+        var shown = names.slice(0, 6).join(', ') + (names.length > 6 ? ', …' : '');
+        return attr('data-changes-some').replace('%d', String(names.length)) + ' ' + shown;
+    };
+    // What the form held once the page had settled; used only for fields
+    // the buttons of this module changed without anyone working in them.
+    var baseline = {};
 
     // ------------------------------------------------------------------
     // The question, in the style of the pages of Batch Values.
@@ -221,10 +367,27 @@
      * revision history module (Revision History) shows what the save would change
      * and what leaving would lose, read from the server. When it is on this
      * page, this module does not ask the same thing again (0.9.0).
+     *
+     * Each such module is known by the settings it puts on the page and by
+     * the mark its script sets on the form it watches. Both are needed: with
+     * the settings but without the mark, its script did not run, and this
+     * module asks itself rather than nobody asking (1.0.1). The first entry is
+     * Revision History; the second, the older module it replaced.
      */
+    var OTHERS = [
+        { global: 'RevisionHistoryConfirm', mark: 'data-rh-confirm' },
+        { global: 'TchConfirm', mark: 'data-tch-confirm' },
+    ];
+    window.batchValuesOtherConfirms = OTHERS;
     var othersAsk = function () {
-        var other = window.TchConfirm;
-        return !!(other && other.url && other.mode !== 'batch');
+        return OTHERS.some(function (o) {
+            var other = window[o.global];
+            if (!other || !other.url || other.mode === 'batch') {
+                return false;
+            }
+            // Its script marks the form once the page has loaded.
+            return document.readyState !== 'complete' || (!!form && form.getAttribute(o.mark) === 'on');
+        });
     };
     // True while that other module has not asked yet: the click is left alone
     // so it can. Once it has asked and pressed the button again, it releases
@@ -249,7 +412,7 @@
         askUser({
             title: attr('data-confirm-cancel-title'),
             text: attr('data-confirm-cancel-text'),
-            note: attr('data-changes-some').replace('%d', String(changedFields())),
+            note: changesNote(),
             ok: attr('data-confirm-cancel-ok'),
             danger: true,
             then: then,
@@ -262,7 +425,7 @@
     // The state of the form once the page has settled (Chosen, Value Suggest
     // and the other widgets fill inputs of their own).
     window.setTimeout(function () {
-        baseline = state();
+        baseline = snapshot();
         warnIfTooLong(true);
     }, 700);
 
@@ -313,7 +476,6 @@
             return;
         }
         e.preventDefault();
-        var changes = changedFields();
         // When the buttons of this module were used on the page, they know
         // exactly what they did; that is better than a count of fields.
         var byTools = [];
@@ -324,9 +486,7 @@
         }
         var note = '';
         if (!long) {
-            note = changes
-                ? attr('data-changes-some').replace('%d', String(changes))
-                : attr('data-changes-none');
+            note = changesNote();
             if (byTools.length && window.batchValuesFormDoneText) {
                 note = window.batchValuesFormDoneText().join(' · ');
             }

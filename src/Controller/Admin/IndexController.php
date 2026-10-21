@@ -404,7 +404,24 @@ class IndexController extends AbstractActionController
             return $this->redirect()->toRoute('admin/batch-values', ['action' => 'new']);
         }
         $resourceType = $state['resource_type'] ?? 'items';
-        $issues = $this->planner()->setResourceType($resourceType)->linkIssues($state['ids']);
+        // ONE FIELD, ALL OF IT (1.0.2). The summary shows the first 50 of each list, and
+        // "The first 50 of 83" left no way to see the other 33. ?property= shows that one
+        // field's lists whole, 200 rows to a page (?page=), so a field with thousands is
+        // still a page a browser can draw. The rows are read with the planner's own "all"
+        // (limit 0, which the Fix already uses), and only that field is read.
+        $property = (int) $this->params()->fromQuery('property');
+        $page = max(1, (int) $this->params()->fromQuery('page', 1));
+        $perPage = 200;
+        if ($property > 0) {
+            $issues = $this->planner()->setResourceType($resourceType)->linkIssues($state['ids'], $property, 0);
+            foreach ($issues as &$one) {
+                $one['self'] = array_slice($one['self'], ($page - 1) * $perPage, $perPage);
+                $one['one_way'] = array_slice($one['one_way'], ($page - 1) * $perPage, $perPage);
+            }
+            unset($one);
+        } else {
+            $issues = $this->planner()->setResourceType($resourceType)->linkIssues($state['ids']);
+        }
         $thumbIds = [];
         foreach ($issues as $issue) {
             foreach ($issue['self'] as $row) {
@@ -421,6 +438,9 @@ class IndexController extends AbstractActionController
             'count' => count($state['ids']),
             'issues' => $issues,
             'thumbIds' => array_keys($thumbIds),
+            'property' => $property,
+            'page' => $page,
+            'perPage' => $perPage,
         ]);
     }
 

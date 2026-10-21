@@ -6,6 +6,9 @@
  * @var int $count
  * @var array $issues
  * @var array $thumbIds
+ * @var int $property one field shown whole (1.0.2), or 0 for the summary of every field
+ * @var int $page the page of that field's lists, $perPage rows to a page
+ * @var int $perPage
  */
 $translate = $this->plugin('translate');
 $escape = $this->plugin('escapeHtml');
@@ -19,6 +22,29 @@ $thumbs = $bv->thumbs($thumbIds, $resourceType);
 $editUrl = function ($id) use ($typeController) {
     return $this->url('admin/id', ['controller' => $typeController, 'action' => 'edit', 'id' => (int) $id]);
 };
+$property = (int) ($property ?? 0);
+$page = (int) ($page ?? 1);
+$perPage = (int) ($perPage ?? 200);
+$here = function (array $q) use ($token) {
+    return $this->url('admin/batch-values', ['action' => 'links'], ['query' => ['token' => $token] + $q]);
+};
+// Rows 201–400 of 832 · Previous · Next — for one list of the field shown whole.
+$pager = function (int $total, string $anchor) use ($page, $perPage, $property, $here, $translate, $escape) {
+    if ($total <= $perPage) {
+        return '';
+    }
+    $last = (int) ceil($total / $perPage);
+    $from = ($page - 1) * $perPage + 1;
+    $to = min($total, $page * $perPage);
+    $out = '<p class="bv-muted bv-pager">' . sprintf($translate('Rows %1$d–%2$d of %3$d.'), $from, $to, $total);
+    if ($page > 1) {
+        $out .= ' <a href="' . $escape($here(['property' => $property, 'page' => $page - 1]) . $anchor) . '">' . $escape($translate('Previous')) . '</a>';
+    }
+    if ($page < $last) {
+        $out .= ' <a href="' . $escape($here(['property' => $property, 'page' => $page + 1]) . $anchor) . '">' . $escape($translate('Next')) . '</a>';
+    }
+    return $out . '</p>';
+};
 ?>
 <?php echo $this->pageTitle($translate('Links to check'), 1, $translate('Batch Values')); ?>
 
@@ -29,13 +55,16 @@ $editUrl = function ($id) use ($typeController) {
 </nav>
 
 <p class="bv-help"><?php echo sprintf($translate('Links of the %1$d selected %2$s that look wrong: an item linked to itself, and links that go one way only. Nothing is changed here.'), $count, $escape($typeLabel)); ?></p>
+<?php if ($property): ?>
+<p><?php echo $this->hyperlink($translate('← Back to every field'), $here([]), ['class' => 'bv-back-all']); ?></p>
+<?php endif; ?>
 
 <?php if (!$issues): ?>
 <p class="bv-note"><?php echo $translate('Nothing to report: no item links to itself, and every link of a field that is used both ways has its link back.'); ?></p>
 <?php else: ?>
 <?php echo $bv->peekAssets(); ?>
 <?php foreach ($issues as $propertyId => $issue): ?>
-<section class="bv-check-field">
+<section class="bv-check-field" id="bv-field-<?php echo (int) $propertyId; ?>">
     <div class="bv-check-group">
         <div class="bv-check-head">
             <strong><?php echo $escape($issue['label']); ?></strong> <span class="bv-muted"><?php echo $escape($issue['term']); ?></span>
@@ -49,7 +78,7 @@ $editUrl = function ($id) use ($typeController) {
             <?php echo $this->hyperlink($translate('Fix: remove these values'), $this->url('admin/batch-values', ['action' => 'links-fix'], ['query' => ['token' => $token, 'property' => $propertyId]]), ['class' => 'button bv-small-button']); ?>
             <span class="bv-muted"><?php echo $translate('Opens the preview step; nothing is written yet.'); ?></span>
         </div>
-        <table class="tablesaw bv-table" data-peek-list data-tablesaw-mode="stack">
+        <table class="tablesaw bv-table" id="bv-self-<?php echo (int) $propertyId; ?>" data-peek-list data-tablesaw-mode="stack">
             <thead><tr><th><?php echo $escape(ucfirst($typeLabel)); ?></th><th></th></tr></thead>
             <tbody>
             <?php foreach ($issue['self'] as $row): ?>
@@ -60,13 +89,16 @@ $editUrl = function ($id) use ($typeController) {
             <?php endforeach; ?>
             </tbody>
         </table>
-        <?php if ($issue['self_total'] > count($issue['self'])): ?>
-        <p class="bv-muted"><?php echo sprintf($translate('The first %1$d of %2$d. “Fix” takes them all.'), count($issue['self']), $issue['self_total']); ?></p>
+        <?php if ($property): ?>
+        <?php echo $pager($issue['self_total'], '#bv-self-' . (int) $propertyId); ?>
+        <?php elseif ($issue['self_total'] > count($issue['self'])): ?>
+        <p class="bv-muted"><?php echo sprintf($translate('The first %1$d of %2$d. “Fix” takes them all.'), count($issue['self']), $issue['self_total']); ?>
+            <a href="<?php echo $escape($here(['property' => (int) $propertyId]) . '#bv-self-' . (int) $propertyId); ?>"><?php echo $escape(sprintf($translate('Show all %d'), $issue['self_total'])); ?></a></p>
         <?php endif; ?>
         <?php endif; ?>
 
         <?php if ($issue['one_way_total']): ?>
-        <details class="bv-cleanup-issue">
+        <details class="bv-cleanup-issue" id="bv-oneway-<?php echo (int) $propertyId; ?>"<?php echo $property ? ' open' : ''; ?>>
             <summary><strong><?php echo $translate('Links that go one way only'); ?></strong>
                 <span class="bv-muted"><?php echo sprintf($translate('%1$d of them · %2$d links of this field do go both ways'), $issue['one_way_total'], $issue['mutual']); ?></span></summary>
             <p class="bv-muted"><?php echo $translate('A links to B in this field, but B does not link back to A. Only fields that are used both ways somewhere are looked at. This is not always a mistake — it is shown so it can be judged item by item. Nothing here is fixed automatically: adding the link back is a different value in each item.'); ?></p>
@@ -82,8 +114,11 @@ $editUrl = function ($id) use ($typeController) {
                 <?php endforeach; ?>
                 </tbody>
             </table>
-            <?php if ($issue['one_way_total'] > count($issue['one_way'])): ?>
-            <p class="bv-muted"><?php echo sprintf($translate('The first %1$d of %2$d.'), count($issue['one_way']), $issue['one_way_total']); ?></p>
+            <?php if ($property): ?>
+            <?php echo $pager($issue['one_way_total'], '#bv-oneway-' . (int) $propertyId); ?>
+            <?php elseif ($issue['one_way_total'] > count($issue['one_way'])): ?>
+            <p class="bv-muted"><?php echo sprintf($translate('The first %1$d of %2$d.'), count($issue['one_way']), $issue['one_way_total']); ?>
+                <a href="<?php echo $escape($here(['property' => (int) $propertyId]) . '#bv-oneway-' . (int) $propertyId); ?>"><?php echo $escape(sprintf($translate('Show all %d'), $issue['one_way_total'])); ?></a></p>
             <?php endif; ?>
         </details>
         <?php endif; ?>

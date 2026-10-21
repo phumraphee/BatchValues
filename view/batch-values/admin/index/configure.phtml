@@ -226,6 +226,8 @@ $ops = \BatchValues\Stdlib\Operations::class;
             <input type="hidden" name="query" value="<?php echo $escapeAttr(json_encode($coreSearch)); ?>">
             <?php endif; ?>
             <button type="submit" class="bv-link-button" title="<?php echo $escapeAttr($translate('Same selection, in Omeka\'s own batch edit form. Changes made there are not in the Batch Values log and cannot be cancelled.')); ?>"><?php echo $escape($translate('Use Omeka\'s batch edit instead')); ?></button>
+            <?php // Said on the page, not only in a tooltip: a finger on an iPad never sees a title (R12, 2026-10-21). ?>
+            <span class="bv-muted bv-said"><?php echo $escape($translate('Same selection, in Omeka\'s own batch edit form. Changes made there are not in the Batch Values log and cannot be cancelled.')); ?></span>
         </form>
         </div>
         <?php endif; ?>

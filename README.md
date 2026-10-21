@@ -80,6 +80,10 @@ one item per media · Delete media (cannot be cancelled; asks for confirmation).
 **Checks** (nothing is changed) — data types that do not match the template · values entered
 twice · values to clean up · links to check · accession numbers (see Settings).
 
+*Links to check* lists the first 50 of each kind per field. **Show all N** under a list opens that
+one field whole, 200 rows to a page with Previous and Next (1.0.2); until 1.0.1 the rest could not
+be seen at all.
+
 ## The log and cancelling
 
 - Each run is one change set: who made it (name and email as they were at that moment), when,

@@ -23,6 +23,8 @@ class Operations
         Operation\SplitValues::class,
         Operation\JoinValues::class,
         Operation\CleanValues::class,
+        Operation\HtmlText::class,
+        Operation\AuthorityValues::class,
         Operation\CopyValues::class,
         Operation\MoveValues::class,
         Operation\ValueVisibility::class,
@@ -60,7 +62,7 @@ class Operations
             'Fix the text of values', // @translate
             'Spelling, words, spaces, lists', // @translate
             true,
-            ['replace', 'find_replace', 'affix', 'split', 'join', 'clean'],
+            ['replace', 'find_replace', 'affix', 'split', 'join', 'clean', 'html_text', 'authority'],
         ],
         'copy_move' => [
             'Copy or move to another field', // @translate
@@ -100,6 +102,8 @@ class Operations
         'split' => ['“Bangkok; Chiang Mai” → “Bangkok” + “Chiang Mai”', 'explode separate semicolon comma list divide'],
         'join' => ['“Bangkok” + “Chiang Mai” → “Bangkok; Chiang Mai”', 'merge combine concatenate glue'],
         'clean' => ['“ Bangkok ” → “Bangkok” · Bangkok, Bangkok → Bangkok', 'trim whitespace spaces duplicate dedupe invisible empty tidy'],
+        'html_text' => ['“<p>Rice <b>field</b></p>” → “Rice field”', 'html strip tags plain text markup extract'],
+        'authority' => ['http://id.loc.gov/…/sh85061212 → “Ice cream” · “Bangkok” → geonames.org/1609350', 'authority uri label fetch fill lookup value suggest geonames wikidata getty loc idref orcid ror gnd'],
         'copy' => ['Subject: Bangkok → Subject: Bangkok + Coverage: Bangkok', 'duplicate property field'],
         'move' => ['Subject: Bangkok → Coverage: Bangkok', 'displace transfer property field'],
         'visibility' => ['Note: public → private', 'hide show private public value'],

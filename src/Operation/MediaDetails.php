@@ -48,7 +48,7 @@ class MediaDetails extends AbstractMediaOperation
 
     public function formVars(array $ctx): array
     {
-        return ['kinds' => $this->mediaKinds($ctx['ids'], $ctx), 'fields' => $this->fields(), 'modes' => self::MODES];
+        return ['kinds' => $this->mediaKinds($ctx['ids'], $ctx), 'renderers' => $this->mediaRenderers($ctx['ids'], $ctx), 'fields' => $this->fields(), 'modes' => self::MODES];
     }
 
     public function parse(array $post, array $ctx): array
@@ -74,6 +74,7 @@ class MediaDetails extends AbstractMediaOperation
             'regex' => !empty($post['media_regex']),
             'only_empty' => !empty($post['only_empty']),
             'kinds' => $this->parseKinds($post),
+            'renderers' => $this->parseRenderers($post),
         ];
         if ($mode === 'from_title' && $field !== 'alt_text') {
             $errors[] = $this->translate('Only the alt text can be taken from the title.');

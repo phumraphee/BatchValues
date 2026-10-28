@@ -31,7 +31,7 @@ class MediaThumbnails extends AbstractMediaOperation
 
     public function formVars(array $ctx): array
     {
-        return ['kinds' => $this->mediaKinds($ctx['ids'], $ctx)];
+        return ['kinds' => $this->mediaKinds($ctx['ids'], $ctx), 'renderers' => $this->mediaRenderers($ctx['ids'], $ctx)];
     }
 
     public function syncLimit(int $default): int
@@ -41,7 +41,7 @@ class MediaThumbnails extends AbstractMediaOperation
 
     public function parse(array $post, array $ctx): array
     {
-        $params = ['kinds' => $this->parseKinds($post), 'only_missing' => !empty($post['only_missing'])];
+        $params = ['kinds' => $this->parseKinds($post), 'renderers' => $this->parseRenderers($post), 'only_missing' => !empty($post['only_missing'])];
         $params['display'] = [$this->kindsDisplay($params)];
         if ($params['only_missing']) {
             $params['display'][] = ['label' => 'Where', 'text' => 'Only media without thumbnails']; // @translate

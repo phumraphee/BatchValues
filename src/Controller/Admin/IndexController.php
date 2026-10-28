@@ -1003,6 +1003,7 @@ class IndexController extends AbstractActionController
         foreach (array_chunk($ids, 500) as $chunk) {
             $plan += $operation->planAll($chunk, $params, $ctx);
         }
+        $params = $operation->keepFromPreview($params);
         $summary = Planner::summarize($plan);
         $stats = $planner->propertyStats($ids, array_filter([
             $property ? $property->getId() : null,

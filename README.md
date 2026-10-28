@@ -1,16 +1,17 @@
 # Batch Values
 
 **Batch Values** is an Omeka S module for bulk editing: change many items, item sets and media
-at once — **add, remove, replace, find and replace, split, join and clean up values**, change
-visibility, language, data type, template, class, owner, item sets, sites and thumbnails,
-reorder media, edit media details and make page images from PDFs.
+at once — **add, remove, replace, find and replace, split, join and clean up values**, fill labels
+and links from authority services, change visibility, language, data type, template, class,
+owner, item sets, sites and thumbnails, reorder media, edit media details and make page images
+from PDFs.
 
 Every run shows a **preview** first, every change is **logged**, and almost every run can be
 **cancelled** later — one change at a time or the whole run.
 
 ![Choosing what to do with a selection of items](https://raw.githubusercontent.com/phumraphee/BatchValues/main/docs/images/actions.png)
 
-- Omeka S 4.x · no other module required
+- Omeka S 4.x · no other module required (Value Suggest is used when it is on)
 - Licence: GPL-3.0-or-later (see `LICENSE`)
 - Issues and questions: https://github.com/phumraphee/BatchValues/issues
 
@@ -57,10 +58,19 @@ Remove values.
 
 **Fix the text of values** — Replace whole values · Find and replace text (match case, whole
 value, regular expressions with `$1`) · Add text before or after · Split into several values ·
-Join values into one · Clean up spaces and duplicates.
+Join values into one · Clean up spaces and duplicates · Plain text from HTML (1.1.0) · Fill from
+an authority (1.1.0).
 These touch text-like data types only (Text, URI, HTML, XML, Custom Vocab, Numeric, Value
 Suggest); a value that links to a resource is never rewritten as text. Every new value is checked
 by its data type before it is saved.
+
+*Fill from an authority* fills the empty labels of links, sets every label to the authority's
+name, or finds the link of a text (exactly one suggestion with that text, or none is taken). It
+asks Value Suggest first when that module is on, with its services and settings; otherwise it
+reads the link's own page, for links of id.loc.gov, wikidata.org, geonames.org, idref.fr,
+vocab.getty.edu, d-nb.info (GND), orcid.org and ror.org only — no other address is opened. The
+services are asked during the preview and the run writes what the preview showed; at most 200
+questions per run.
 
 **Copy or move to another field** — copy or move values to another property, all of them or the
 ones that match a rule; a moved value keeps its id, visibility and annotation.
@@ -76,6 +86,11 @@ and sites · Change owner · Set or remove the thumbnail.
 **Media and files** — Reorder media · Make media public or private · Edit alt text, file name,
 media type, language or HTML · Make thumbnails again · Make page images from PDFs · Split items:
 one item per media · Delete media (cannot be cancelled; asks for confirmation).
+Most of them can be limited to kinds of media and, since 1.1.0, to the media shown by a renderer
+(file, html, youtube, oembed, iiif…). *Make page images from PDFs* can leave other modules out
+(*Let other modules process the page images*, on by default): faster, but text extraction or a
+search index of another module do not see the pages. *Set or remove the thumbnail* can be limited
+by the primary media (has no image of its own, has one, or is of a kind).
 
 **Checks** (nothing is changed) — data types that do not match the template · values entered
 twice · values to clean up · links to check · accession numbers (see Settings).
@@ -119,13 +134,19 @@ be seen at all.
   /^(?<kind>[A-Z]+)-(?<year>\d{4})-(?<serial>\d{4})$/ | kind, year
   ```
 
-- **Run in the background above this many items** — default 50 (3 for tasks on files).
+- **Run in the background above this many items** — default 50 (3 for tasks on files, 20 for
+  *Fill from an authority*).
+- **Second language beside the labels** (1.1.0) — e.g. `th`: the newer choices also show their
+  words in that language, from the module's translation file (`language/th.po`). Empty: English
+  only.
 
 ## Compared with Omeka's batch edit and Bulk Edit
 
 Everything Omeka's *Edit selected / Edit all* form does has a task here, and so does every task of
-the Bulk Edit module (3.4.39) — with a preview, a log and cancelling, which neither has. Both can
-stay installed.
+the Bulk Edit module (3.4.40) — with a preview, a log and cancelling, which neither has. Since
+1.1.0 that includes filling labels and links from authorities, plain text from HTML, media by
+renderer, the thumbnail's primary-media condition and PDF pages without other modules' events.
+Both can stay installed.
 
 ## Opening Batch Values from another module
 
@@ -136,7 +157,7 @@ POST (or GET with `?from_search=1&<items browse query>`) to `/admin/batch-values
 | `resource_id_list` or `resource_ids[]` | the ids (a list separated by commas, spaces or new lines, or one per field) |
 | `resource_type` | `items` (default) · `item_sets` · `media` |
 | `term` | a property to preselect, e.g. `dcterms:subject` (or its id) |
-| `operation` | a task to preselect: `add` · `remove` · `replace` · `find_replace` · `affix` · `split` · `join` · `clean` · `convert` · `copy` · `move` · `visibility` · `language` · `sort` · … |
+| `operation` | a task to preselect: `add` · `remove` · `replace` · `find_replace` · `affix` · `split` · `join` · `clean` · `html_text` · `authority` · `convert` · `copy` · `move` · `visibility` · `language` · `sort` · … |
 | `return_url`, `return_label` | a link back (a path inside Omeka starting with `/`) |
 
 This page writes nothing; every write still goes through the preview. The log tables can be read

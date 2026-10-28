@@ -768,6 +768,17 @@ class Processor
                 }
                 $itemId = (int) ($change['item_id'] ?? $id);
                 return ['field' => 'media_removed', 'custom' => 'remove_media', 'change' => ['media' => $existing, 'item_id' => $itemId]];
+            case 'media_restored':
+                // Media put back by a cancel: deleted again (their files kept
+                // aside as for any deletion, so this too can be cancelled).
+                $existing = [];
+                foreach ($this->planner->mediaOf(array_map('intval', array_values($change['restored'] ?? [])), true) as $mediaId => $list) {
+                    $existing[$mediaId] = Planner::mediaSnapshot($list[0]);
+                }
+                if (!$existing) {
+                    return ['note' => 'The media put back are no longer there.']; // @translate
+                }
+                return ['field' => 'media_removed', 'custom' => 'remove_media', 'change' => ['media' => $existing, 'item_id' => (int) ($change['item_id'] ?? $id)]];
             case 'split_item':
                 return ['custom' => 'unsplit_item', 'change' => $change];
             case 'media_removed':

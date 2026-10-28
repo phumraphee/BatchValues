@@ -26,6 +26,6 @@ $escapeAttr = $this->plugin('escapeHtmlAttr');
 <div class="bv-checks">
     <label><input type="checkbox" name="only_empty" value="1"> <?php echo $translate('Only where it is empty now'); ?></label>
 </div>
-<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds]); ?>
+<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds, 'renderers' => $renderers ?? []]); ?>
 <p class="bv-example"><?php echo $translate('Example: alt text of all images, only where empty, from the title: an image of the item “Rice Field” gets the alt text “Rice Field”.'); ?></p>
 <p class="bv-muted"><?php echo $translate('The media type only changes the label Omeka uses to show the file; the file itself is not converted. HTML is cleaned by Omeka’s HTML filter, as when it is typed in the media form; the preview shows the result.'); ?></p>

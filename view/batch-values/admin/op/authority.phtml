@@ -1,0 +1,53 @@
+<?php
+$translate = $this->plugin('translate');
+$bv = $this->plugin('batchValuesRender');
+$escape = $this->plugin('escapeHtml');
+$escapeAttr = $this->plugin('escapeHtmlAttr');
+$hasSuggest = \BatchValues\Stdlib\Authority::hasValueSuggest();
+?>
+<h4><?php echo $translate('1. Values'); ?><?php echo $bv->second('1. Values'); ?></h4>
+<?php echo $this->partial('common/bv-picker', ['allProperties' => $allProperties ?? false, 'matchTypes' => $matchTypes ?? [], 'presetTypes' => $presetTypes ?? [], 'distinct' => $distinct, 'required' => [], 'pickerAllDefault' => true]); ?>
+<h4><?php echo $translate('2. What to fill'); ?><?php echo $bv->second('2. What to fill'); ?></h4>
+<div class="bv-radios bv-mode-choice">
+    <label><input type="radio" name="authority_mode" value="label_missing" checked> <?php echo $translate('Fill empty labels from the link'); ?><?php echo $bv->second('Fill empty labels from the link'); ?>
+        <?php echo $this->partial('common/bv-q', ['text' => $translate('Links (URI or Value Suggest) whose label is empty or is the link itself get the name the authority gives them. Other links are left alone.')]); ?></label>
+    <label><input type="radio" name="authority_mode" value="label_all"> <?php echo $translate('Set every label to the authority’s name'); ?><?php echo $bv->second('Set every label to the authority’s name'); ?>
+        <?php echo $this->partial('common/bv-q', ['text' => $translate('Every link gets the name the authority gives it now, replacing the label typed here. The preview shows each one before anything is written.')]); ?></label>
+    <label><input type="radio" name="authority_mode" value="uri_missing"<?php echo $hasSuggest ? '' : ' disabled'; ?>> <?php echo $translate('Find the link from the text'); ?><?php echo $bv->second('Find the link from the text'); ?>
+        <?php echo $this->partial('common/bv-q', ['text' => $hasSuggest
+            ? $translate('Asks the Value Suggest service of the value’s data type. A link is added only when exactly one suggestion has the same text (case and spaces aside); the text stays as it is.')
+            : $translate('Needs the module Value Suggest, which is not on.')]); ?></label>
+</div>
+<div class="bv-sub-choice" data-switch-show="authority_mode=uri_missing">
+    <?php if ($suggestTypes): ?>
+    <label><strong><?php echo $translate('Plain text values become'); ?></strong><?php echo $bv->second('Plain text values become'); ?>
+        <select name="authority_target">
+            <option value=""><?php echo $translate('— left as they are —'); ?></option>
+            <?php foreach ($suggestTypes as $name => $typeLabel): ?>
+            <option value="<?php echo $escapeAttr($name); ?>"><?php echo $escape($typeLabel); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <?php echo $this->partial('common/bv-q', ['text' => $translate('Text values have no service to ask: choose the one to ask. A value that gets a link takes that data type. Value Suggest values use their own.')]); ?></label>
+    <?php endif; ?>
+    <div class="bv-checks">
+        <label><input type="checkbox" name="authority_loose" value="1"> <?php echo $translate('Also take the only suggestion when its wording differs'); ?><?php echo $bv->second('Also take the only suggestion when its wording differs'); ?></label>
+    </div>
+</div>
+<div class="bv-text-fields">
+    <label><strong><?php echo $translate('Language'); ?></strong><?php echo $bv->second('Language'); ?>
+        <input type="text" name="authority_lang" size="6" maxlength="20" autocomplete="off" placeholder="en, th…">
+        <?php echo $this->partial('common/bv-q', ['text' => $translate('The language to ask for, e.g. “th” or “en”. Empty: the authority’s main name. When the authority has no name in that language, its main name is used.')]); ?></label>
+</div>
+<div class="bv-radios bv-mode-choice" data-switch-hide="authority_mode=uri_missing">
+    <strong><?php echo $translate('Language of the labels'); ?><?php echo $bv->second('Language of the labels'); ?></strong>
+    <label><input type="radio" name="authority_lang_mode" value="keep" checked> <?php echo $translate('keep'); ?><?php echo $bv->second('keep'); ?></label>
+    <label><input type="radio" name="authority_lang_mode" value="set"> <?php echo $translate('set to the language above'); ?><?php echo $bv->second('set to the language above'); ?></label>
+    <label><input type="radio" name="authority_lang_mode" value="remove"> <?php echo $translate('remove'); ?><?php echo $bv->second('remove'); ?></label>
+</div>
+<p class="bv-muted"><?php echo $translate('The services are asked during the preview; the run writes what it showed.'); ?>
+    <?php echo $this->partial('common/bv-q', ['text' => sprintf(
+        $translate('Asked first: Value Suggest, with its own services and settings, when it is on. Then the link’s own page, for links of %1$s; no other address is opened. A preview asks at most %2$d questions, for %3$d seconds: the rest are skipped with a reason, run it again for them. The run asks nothing new. Runs of more than 20 resources go to a background job. Cancel sets the labels and links back.'),
+        $known,
+        \BatchValues\Stdlib\Authority::MAX_LOOKUPS,
+        \BatchValues\Stdlib\Authority::MAX_SECONDS
+    )]); ?></p>

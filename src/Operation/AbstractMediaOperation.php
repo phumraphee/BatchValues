@@ -50,19 +50,52 @@ abstract class AbstractMediaOperation extends AbstractResourceOperation
         return $row['media_type'] ? (string) $row['media_type'] : (string) $row['ingester'];
     }
 
+    /**
+     * Renderers of the media in the selection (1.1.0), for the "only these
+     * renderers" filter: renderer => count. The renderer is how Omeka shows
+     * a media: file, html, oembed, youtube, iiif…
+     */
+    protected function mediaRenderers(array $ids, array $ctx): array
+    {
+        $renderers = [];
+        foreach ($this->mediaRows($ids, $ctx) as $rows) {
+            foreach ($rows as $row) {
+                $renderer = (string) $row['renderer'];
+                $renderers[$renderer] = ($renderers[$renderer] ?? 0) + 1;
+            }
+        }
+        arsort($renderers);
+        return $renderers;
+    }
+
     protected function parseKinds(array $post): array
     {
         return array_values(array_filter(array_map('strval', (array) ($post['media_kinds'] ?? [])), 'strlen'));
     }
 
+    protected function parseRenderers(array $post): array
+    {
+        return array_values(array_filter(array_map('strval', (array) ($post['media_renderers'] ?? [])), 'strlen'));
+    }
+
+    protected function rendererMatches(array $row, array $params): bool
+    {
+        return empty($params['renderers']) || in_array((string) $row['renderer'], $params['renderers'], true);
+    }
+
     protected function kindMatches(array $row, array $params): bool
     {
-        return empty($params['kinds']) || in_array(self::kindOf($row), $params['kinds'], true);
+        return (empty($params['kinds']) || in_array(self::kindOf($row), $params['kinds'], true))
+            && $this->rendererMatches($row, $params);
     }
 
     protected function kindsDisplay(array $params): array
     {
-        return ['label' => 'Media', 'text' => empty($params['kinds']) ? $this->translate('All media') : implode(', ', $params['kinds'])]; // @translate
+        $text = empty($params['kinds']) ? $this->translate('All media') : implode(', ', $params['kinds']);
+        if (!empty($params['renderers'])) {
+            $text .= ' · ' . sprintf($this->translate('shown by %s'), implode(', ', $params['renderers']));
+        }
+        return ['label' => 'Media', 'text' => $text]; // @translate
     }
 
     protected static function mediaLabel(array $row): string

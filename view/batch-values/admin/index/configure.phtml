@@ -141,11 +141,11 @@ $ops = \BatchValues\Stdlib\Operations::class;
             </summary>
             <div class="bv-menu-ops">
             <?php foreach ($group['operations'] as $op): ?>
-            <?php $search = mb_strtolower($translate($op->label()) . ' ' . $translate($op->help()) . ' ' . $ops::example($op->name()) . ' ' . $ops::keywords($op->name()) . ' ' . $op->label()); ?>
+            <?php $search = mb_strtolower($translate($op->label()) . ' ' . $translate($op->help()) . ' ' . $ops::example($op->name()) . ' ' . $ops::keywords($op->name()) . ' ' . $op->label() . ' ' . strip_tags($bv->second($op->label()))); ?>
             <label class="bv-op<?php echo $operation === $op ? ' is-current' : ''; ?>" data-search="<?php echo $escapeAttr($search); ?>">
                 <input type="radio" name="operation" value="<?php echo $escapeAttr($op->name()); ?>" data-needs-property="<?php echo $op->needsProperty() ? '1' : '0'; ?>" data-all-properties="<?php echo $op->allowsAllProperties() ? '1' : '0'; ?>"<?php echo $operation === $op ? ' checked' : ''; ?>>
                 <span class="bv-op-text">
-                    <strong><?php echo $escape($translate($op->label())); ?></strong><?php if (!$op->reversible()): ?> <span class="bv-flag bv-flag-warn"><?php echo $translate('cannot be cancelled'); ?></span><?php endif; ?>
+                    <strong><?php echo $escape($translate($op->label())); ?></strong><?php echo $bv->second($op->label()); ?><?php if (!$op->reversible()): ?> <span class="bv-flag bv-flag-warn"><?php echo $translate('cannot be cancelled'); ?></span><?php endif; ?>
                     <span class="bv-op-help"><?php echo $escape($translate($op->help())); ?></span>
                     <?php if ($ops::example($op->name()) !== ''): ?><span class="bv-op-example"><?php echo $escape($ops::example($op->name())); ?></span><?php endif; ?>
                 </span>
@@ -241,7 +241,7 @@ $ops = \BatchValues\Stdlib\Operations::class;
     <?php echo $this->formHidden($csrf); ?>
 
     <div class="bv-op-head">
-        <h3><?php echo $escape($translate($operation->label())); ?>
+        <h3><?php echo $escape($translate($operation->label())); ?><?php echo $bv->second($operation->label()); ?>
             <?php if ($needsProperty && $property): ?> — <?php echo $escape($property->getLabel()); ?> <span class="bv-muted"><?php echo $escape($propertyTerm); ?></span><?php elseif ($needsProperty && !empty($allProperties)): ?> — <?php echo $translate('All properties'); ?><?php endif; ?>
         </h3>
         <p><?php echo $escape($translate($operation->help())); ?>

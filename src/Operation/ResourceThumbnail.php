@@ -34,7 +34,71 @@ class ResourceThumbnail extends AbstractResourceOperation
         $counts = $connection->fetchAllKeyValue(
             'SELECT thumbnail_id, COUNT(*) FROM resource WHERE thumbnail_id IS NOT NULL AND id IN (' . implode(',', array_map('intval', $ctx['ids'] ?: [0])) . ') GROUP BY thumbnail_id'
         );
-        return ['assets' => $assets, 'thumbnailCounts' => $counts];
+        return ['assets' => $assets, 'thumbnailCounts' => $counts, 'primaryKinds' => $this->primaryKinds($ctx)];
+    }
+
+    /** Conditions on the primary media (1.1.0). */
+    const PRIMARY = [
+        'no_thumb' => 'its primary media has no image of its own (audio, a document…)', // @translate
+        'has_thumb' => 'its primary media has an image of its own', // @translate
+        'kinds' => 'its primary media is of a kind ticked below', // @translate
+    ];
+
+    /**
+     * The primary media of each resource (1.1.0): for an item, the one chosen
+     * on its page, else its first media (as Omeka shows it); a media is its
+     * own. Item sets have none.
+     *
+     * @return array resource id => media row (id, media_type, ingester, has_thumbnails)
+     */
+    public function primaryMedia(array $ids, string $resourceType): array
+    {
+        if (!$ids || !in_array($resourceType, ['items', 'media'], true)) {
+            return [];
+        }
+        $connection = $this->services->get('Omeka\Connection');
+        $list = implode(',', array_map('intval', $ids));
+        if ($resourceType === 'media') {
+            $sql = "SELECT m.id AS resource_id, m.id, m.media_type, m.ingester, m.has_thumbnails FROM media m WHERE m.id IN ($list)";
+        } else {
+            $first = '(SELECT m2.id FROM media m2 WHERE m2.item_id = i.id ORDER BY m2.position, m2.id LIMIT 1)';
+            $chosen = $connection->fetchOne("SHOW COLUMNS FROM item LIKE 'primary_media_id'") ? "COALESCE(i.primary_media_id, $first)" : $first;
+            $sql = "SELECT i.id AS resource_id, m.id, m.media_type, m.ingester, m.has_thumbnails FROM item i JOIN media m ON m.id = $chosen WHERE i.id IN ($list)";
+        }
+        $out = [];
+        foreach ($connection->fetchAllAssociative($sql) as $row) {
+            $row['has_thumbnails'] = (bool) $row['has_thumbnails'];
+            $out[(int) $row['resource_id']] = $row;
+        }
+        return $out;
+    }
+
+    /** Kinds of the primary media of the selection: kind => count. */
+    protected function primaryKinds(array $ctx): array
+    {
+        $kinds = [];
+        foreach ($this->primaryMedia($ctx['ids'] ?? [], $ctx['resource_type'] ?? 'items') as $row) {
+            $kind = AbstractMediaOperation::kindOf($row);
+            $kinds[$kind] = ($kinds[$kind] ?? 0) + 1;
+        }
+        arsort($kinds);
+        return $kinds;
+    }
+
+    /**
+     * Whether a primary media (or none) fits the condition of the params.
+     */
+    public static function primaryFits(?array $media, array $params): bool
+    {
+        switch ($params['primary'] ?? '') {
+            case 'no_thumb':
+                return $media !== null && !$media['has_thumbnails'];
+            case 'has_thumb':
+                return $media !== null && $media['has_thumbnails'];
+            case 'kinds':
+                return $media !== null && in_array(AbstractMediaOperation::kindOf($media), $params['primary_kinds'] ?? [], true);
+        }
+        return true;
     }
 
     public function parse(array $post, array $ctx): array
@@ -48,7 +112,12 @@ class ResourceThumbnail extends AbstractResourceOperation
             'only_no_media' => !empty($post['only_no_media']),
             'only_has_media' => !empty($post['only_has_media']),
             'only_this' => !empty($post['only_this']),
+            'primary' => isset(self::PRIMARY[$post['only_primary'] ?? '']) ? (string) $post['only_primary'] : '',
+            'primary_kinds' => array_values(array_filter(array_map('strval', (array) ($post['primary_kinds'] ?? [])), 'strlen')),
         ];
+        if ($params['primary'] !== 'kinds') {
+            $params['primary_kinds'] = [];
+        }
         // 0.5 forms.
         if (($post['thumb_mode'] ?? '') === 'remove') {
             $params['mode'] = 'remove';
@@ -67,6 +136,12 @@ class ResourceThumbnail extends AbstractResourceOperation
         if ($params['only_no_media'] && $params['only_has_media']) {
             $errors[] = $this->translate('“Without media” and “with media” cannot both be ticked.');
         }
+        if ($params['primary'] === 'kinds' && !$params['primary_kinds']) {
+            $errors[] = $this->translate('Tick the kinds of primary media.');
+        }
+        if ($params['primary'] !== '' && $params['only_no_media']) {
+            $errors[] = $this->translate('“Without media” and a condition on the primary media cannot go together.');
+        }
         $params['asset'] = $needsAsset ? $assetId : null;
         $where = [];
         if ($params['only_no_thumbnail']) {
@@ -80,6 +155,11 @@ class ResourceThumbnail extends AbstractResourceOperation
         }
         if ($params['only_has_media']) {
             $where[] = $this->translate('media');
+        }
+        if ($params['primary'] !== '') {
+            $where[] = $params['primary'] === 'kinds'
+                ? sprintf($this->translate('a primary media of the kind %s'), implode(', ', $params['primary_kinds']))
+                : $this->translate($params['primary'] === 'no_thumb' ? 'a primary media without an image of its own' : 'a primary media with an image of its own');
         }
         if ($params['mode'] === 'remove') {
             $params['display'] = [['label' => 'Thumbnail', 'text' => $params['only_this']
@@ -112,8 +192,13 @@ class ResourceThumbnail extends AbstractResourceOperation
                 $mediaCounts = array_fill_keys($ids, 1);
             }
         }
+        $primary = !empty($params['primary']) ? $this->primaryMedia($ids, $ctx['resource_type'] ?? 'items') : [];
         foreach ($plan as $id => $entry) {
             if (($entry['outcome'] ?? '') !== 'changed') {
+                continue;
+            }
+            if (!empty($params['primary']) && !self::primaryFits($primary[$id] ?? null, $params)) {
+                $plan[$id] = self::entry($entry['group'], 'skipped_primary');
                 continue;
             }
             $current = $entry['resource']['thumbnail']['before'];

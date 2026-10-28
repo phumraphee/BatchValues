@@ -17,7 +17,8 @@ abstract class AbstractTextOperation extends AbstractOperation
 {
     /**
      * New columns for one row: null when the row is not concerned, else
-     * ['columns' => [...]], ['remove' => true], or ['note' => ?string]
+     * ['columns' => [...]] (with 'also' => ?string, a note that goes with
+     * the change), ['remove' => true], or ['note' => ?string]
      * (concerned, left as it is).
      */
     abstract protected function editRow(array $row, array $params): ?array;
@@ -110,6 +111,10 @@ abstract class AbstractTextOperation extends AbstractOperation
                     $notes[] = $result['note'];
                 }
                 continue;
+            }
+            if (!empty($result['also'])) {
+                // A note that goes with the change.
+                $notes[] = $result['also'];
             }
             $before = Planner::snapshotFromRow($row);
             if (!empty($result['remove'])) {

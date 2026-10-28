@@ -162,6 +162,16 @@ abstract class AbstractOperation
     }
 
     /**
+     * The params kept with the change set, once the preview is planned
+     * (1.1.0): an operation that asked something of another service keeps
+     * the answers here, so the run writes what the preview showed.
+     */
+    public function keepFromPreview(array $params): array
+    {
+        return $params;
+    }
+
+    /**
      * Variables for the form partial "batch-values/admin/op/<name>".
      */
     public function formVars(array $ctx): array

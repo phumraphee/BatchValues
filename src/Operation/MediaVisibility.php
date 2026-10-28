@@ -28,7 +28,7 @@ class MediaVisibility extends AbstractMediaOperation
 
     public function formVars(array $ctx): array
     {
-        return ['kinds' => $this->mediaKinds($ctx['ids'], $ctx)];
+        return ['kinds' => $this->mediaKinds($ctx['ids'], $ctx), 'renderers' => $this->mediaRenderers($ctx['ids'], $ctx)];
     }
 
     public function parse(array $post, array $ctx): array
@@ -37,7 +37,7 @@ class MediaVisibility extends AbstractMediaOperation
         if (!in_array($post['media_public'] ?? '', ['0', '1'], true)) {
             return ['params' => [], 'errors' => [$this->translate('Choose public or private.')]];
         }
-        $params = ['is_public' => $public, 'kinds' => $this->parseKinds($post)];
+        $params = ['is_public' => $public, 'kinds' => $this->parseKinds($post), 'renderers' => $this->parseRenderers($post)];
         $params['display'] = [
             $this->kindsDisplay($params),
             ['label' => 'Visibility', 'text' => $public ? 'Public' : 'Private'], // @translate

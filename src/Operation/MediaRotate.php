@@ -30,7 +30,7 @@ class MediaRotate extends AbstractMediaOperation
         $kinds = $this->mediaKinds($ctx['ids'], $ctx);
         // Only the kinds this module turns.
         $kinds = array_intersect_key($kinds, array_flip(MediaTools::ROTATABLE));
-        return ['kinds' => $kinds, 'tools' => MediaTools::rotateTools()];
+        return ['kinds' => $kinds, 'renderers' => $this->mediaRenderers($ctx['ids'], $ctx), 'tools' => MediaTools::rotateTools()];
     }
 
     public function syncLimit(int $default): int
@@ -47,7 +47,7 @@ class MediaRotate extends AbstractMediaOperation
         if (!MediaTools::rotateTools()) {
             return ['params' => [], 'errors' => [$this->translate('This server has neither jpegtran nor ImageMagick (convert), so images cannot be turned.')]];
         }
-        $params = ['degrees' => $degrees, 'kinds' => $this->parseKinds($post)];
+        $params = ['degrees' => $degrees, 'kinds' => $this->parseKinds($post), 'renderers' => $this->parseRenderers($post)];
         $words = [90 => 'A quarter turn to the right', 180 => 'Upside down', 270 => 'A quarter turn to the left']; // @translate
         $params['display'] = [
             ['label' => 'Turn', 'text' => $this->translate($words[$degrees])], // @translate

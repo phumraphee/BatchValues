@@ -1,5 +1,6 @@
 <?php
 $translate = $this->plugin('translate');
+$bv = $this->plugin('batchValuesRender');
 $escapeAttr = $this->plugin('escapeHtmlAttr');
 ?>
 <?php if (!$tool): ?>
@@ -27,6 +28,9 @@ $escapeAttr = $this->plugin('escapeHtmlAttr');
 <?php endif; ?>
 <div class="bv-checks">
     <label><input type="checkbox" name="skip_done" value="1" checked> <?php echo $translate('Skip a PDF whose page images are there already'); ?></label>
+    <input type="hidden" name="pdf_events" value="0">
+    <label><input type="checkbox" name="pdf_events" value="1" checked> <?php echo $translate('Let other modules process the page images'); ?><?php echo $bv->second('Let other modules process the page images'); ?>
+        <?php echo $this->partial('common/bv-q', ['text' => $translate('Other modules may do something with each new media: extract its text, add it to the search index, make zoom tiles. Untick to make the pages faster without that; the files, thumbnails and the log are made all the same, and Revision History still records the new media. A search index may then need to be rebuilt.')]); ?></label>
 </div>
 <p class="bv-example"><?php echo $translate('Example: “catalogue.pdf” (12 pages) → catalogue-p001.jpg … catalogue-p012.jpg, right after the PDF in the same item.'); ?></p>
 <p class="bv-muted"><?php echo $translate('Each image is created like an uploaded file (thumbnails, and whatever other modules do with new media), with the visibility of the PDF and no metadata; its file name says which page it is. The PDF is kept. Cancelling deletes the page images. This takes time: most runs go to a background job.'); ?></p>

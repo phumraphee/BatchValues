@@ -1,0 +1,19 @@
+<?php
+$translate = $this->plugin('translate');
+$bv = $this->plugin('batchValuesRender');
+?>
+<div class="bv-checks">
+    <strong><?php echo $translate('Which values'); ?><?php echo $bv->second('Which values'); ?></strong>
+    <label><input type="checkbox" checked disabled> <?php echo $translate('HTML values'); ?><?php echo $bv->second('HTML values'); ?></label>
+    <label><input type="checkbox" name="html_xml" value="1"> <?php echo $translate('XML values too'); ?><?php echo $bv->second('XML values too'); ?></label>
+    <label><input type="checkbox" name="html_literal" value="1"> <?php echo $translate('Text values with tags pasted in'); ?><?php echo $bv->second('Text values with tags pasted in'); ?>
+        <?php echo $this->partial('common/bv-q', ['text' => $translate('A Text value counts when it holds a tag such as <p> or <b>, or an entity such as &amp;. Other Text values are left alone.')]); ?></label>
+</div>
+<div class="bv-checks">
+    <input type="hidden" name="html_lines" value="0">
+    <label><input type="checkbox" name="html_lines" value="1" checked> <?php echo $translate('Paragraphs and line breaks as new lines'); ?><?php echo $bv->second('Paragraphs and line breaks as new lines'); ?>
+        <?php echo $this->partial('common/bv-q', ['text' => $translate('Unticked, everything is on one line, with a space where a paragraph ended.')]); ?></label>
+</div>
+<p class="bv-example"><?php echo $translate('Example: “<p>Rice <b>field</b>, 1961</p><p>Oil on canvas</p>” → “Rice field, 1961” and “Oil on canvas” on the next line.'); ?></p>
+<p class="bv-muted"><?php echo $translate('The values become the data type Text. Their language, visibility and annotation stay.'); ?>
+    <?php echo $this->partial('common/bv-q', ['text' => $translate('Scripts, styles and comments are dropped; entities (&amp;, &nbsp;…) become the characters they stand for. A value that would be left empty is kept as it is. Where the template asks for HTML, “Change the data type” can turn the values back. The HTML of media (Media → Edit details) is not touched. Cancel puts the HTML back.')]); ?></p>

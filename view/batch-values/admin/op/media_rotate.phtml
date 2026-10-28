@@ -9,7 +9,7 @@ $lossless = in_array('jpegtran', $tools ?? [], true);
     <label><input type="radio" name="degrees" value="270"> <?php echo $translate('a quarter to the left (↺ 90°)'); ?></label>
     <label><input type="radio" name="degrees" value="180"> <?php echo $translate('upside down (180°)'); ?></label>
 </div>
-<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds]); ?>
+<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds, 'renderers' => $renderers ?? []]); ?>
 <?php if (!$kinds): ?>
 <p class="bv-note"><?php echo $translate('No media of the selection is an image this module turns (JPEG, PNG, TIFF, WebP).'); ?></p>
 <?php endif; ?>

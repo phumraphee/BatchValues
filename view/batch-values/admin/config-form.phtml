@@ -143,4 +143,11 @@ $escape = $this->plugin('escapeHtml');
         </div>
         <div class="inputs"><input type="number" min="1" id="batchvalues_sync_limit" name="batchvalues_sync_limit" value="<?php echo (int) $syncLimit; ?>"></div>
     </div>
+    <div class="field">
+        <div class="field-meta">
+            <label for="batchvalues_second_language"><?php echo $translate('Second language beside the labels'); ?></label>
+            <div class="field-description"><?php echo $translate('A language code, e.g. “th”: the newer choices of the Batch Values pages also show their words in that language, from the module’s translation file. Empty: English only.'); ?></div>
+        </div>
+        <div class="inputs"><input type="text" id="batchvalues_second_language" name="batchvalues_second_language" size="6" maxlength="20" value="<?php echo $this->escapeHtmlAttr($secondLanguage ?? ''); ?>"></div>
+    </div>
 </fieldset>

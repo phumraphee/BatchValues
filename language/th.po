@@ -1,0 +1,85 @@
+# Thai words of Batch Values, shown beside the English when Configure →
+# "Second language beside the labels" is "th" (1.1.0), or when the admin is in Thai.
+# After editing: php tools/po2mo.php live/modules/BatchValues/language/th.po
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: th\n"
+
+msgid "Which values"
+msgstr "ค่าไหน"
+
+msgid "HTML values"
+msgstr "ค่าชนิด HTML"
+
+msgid "XML values too"
+msgstr "รวมค่าชนิด XML"
+
+msgid "Text values with tags pasted in"
+msgstr "ข้อความที่มีแท็กติดมา"
+
+msgid "Paragraphs and line breaks as new lines"
+msgstr "ย่อหน้าเป็นบรรทัดใหม่"
+
+msgid "1. Values"
+msgstr "1. ค่า"
+
+msgid "2. What to fill"
+msgstr "2. เติมอะไร"
+
+msgid "Fill empty labels from the link"
+msgstr "เติมชื่อที่ว่างจากลิงก์"
+
+msgid "Set every label to the authority’s name"
+msgstr "ตั้งชื่อทุกลิงก์ตามแหล่งอ้างอิง"
+
+msgid "Find the link from the text"
+msgstr "หาลิงก์จากข้อความ"
+
+msgid "Plain text values become"
+msgstr "ข้อความธรรมดาเปลี่ยนเป็น"
+
+msgid "Also take the only suggestion when its wording differs"
+msgstr "รับคำแนะนำเดียวแม้สะกดต่าง"
+
+msgid "Language"
+msgstr "ภาษา"
+
+msgid "Language of the labels"
+msgstr "ภาษาของชื่อ"
+
+msgid "keep"
+msgstr "คงเดิม"
+
+msgid "set to the language above"
+msgstr "ตั้งตามภาษาข้างบน"
+
+msgid "remove"
+msgstr "ลบออก"
+
+msgid "Primary media"
+msgstr "สื่อหลัก"
+
+msgid "any"
+msgstr "ไม่จำกัด"
+
+msgid "has no image of its own (audio, a document…)"
+msgstr "ไม่มีภาพของตัวเอง (เสียง เอกสาร…)"
+
+msgid "has an image of its own"
+msgstr "มีภาพของตัวเอง"
+
+msgid "is of a kind ticked here:"
+msgstr "เป็นชนิดที่เลือก:"
+
+msgid "Let other modules process the page images"
+msgstr "ให้โมดูลอื่นประมวลผลภาพหน้าด้วย"
+
+msgid "Only media shown by (none ticked: all)"
+msgstr "เฉพาะสื่อที่แสดงด้วย (ไม่ติ๊ก: ทั้งหมด)"
+
+msgid "Fill from an authority"
+msgstr "เติมจากแหล่งอ้างอิง"
+
+msgid "Plain text from HTML"
+msgstr "ข้อความล้วนจาก HTML"

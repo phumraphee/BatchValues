@@ -387,7 +387,7 @@ class MediaTools
         $allCreated = [];
         try {
             foreach ($pdfs as $pdfData) {
-                $created = $this->pdfToImages((int) $pdfData['pdf'], (int) ($data['dpi'] ?? 150), (string) ($data['tool'] ?? 'auto'));
+                $created = $this->pdfToImages((int) $pdfData['pdf'], (int) ($data['dpi'] ?? 150), (string) ($data['tool'] ?? 'auto'), !array_key_exists('events', $data) || !empty($data['events']));
                 $allCreated = array_merge($allCreated, $created);
                 $done[] = $pdfData + ['created' => $created, 'pages' => count($created)];
             }
@@ -404,9 +404,15 @@ class MediaTools
     }
 
     /**
+     * Without $events (1.1.0), the page images are made without the API's
+     * events, as Bulk Edit's "process events" unticked: other modules (text
+     * extraction, search index, tiles) are not told. The file, its
+     * thumbnails and the database rows are made all the same, and Revision
+     * History, which reads what is saved, records them.
+     *
      * @return int[] Ids of the media made, in page order.
      */
-    protected function pdfToImages(int $pdfId, int $dpi, string $tool): array
+    protected function pdfToImages(int $pdfId, int $dpi, string $tool, bool $events = true): array
     {
         $em = $this->services->get('Omeka\EntityManager');
         $api = $this->services->get('Omeka\ApiManager');
@@ -459,6 +465,14 @@ class MediaTools
         $isPublic = $pdf->isPublic();
         $base = pathinfo((string) $pdf->getSource(), PATHINFO_FILENAME) ?: ('media-' . $pdf->getId());
         $created = [];
+        $createOptions = ['responseContent' => 'resource'];
+        if (!$events) {
+            $createOptions += ['initialize' => false, 'finalize' => false];
+            // One request with its events, so a module that ties saves to
+            // their run (Revision History) knows this run before the pages
+            // are saved.
+            $api->read('items', $itemId, [], $this->options(['responseContent' => 'resource']));
+        }
         try {
             foreach ($pages as $n => $page) {
                 $media = $api->create('media', [
@@ -467,7 +481,7 @@ class MediaTools
                     'batchvalues_path' => $page,
                     'o:source' => sprintf('%s-p%03d.jpg', $base, $n + 1),
                     'o:is_public' => $isPublic,
-                ], [], $this->options(['responseContent' => 'resource']))->getContent();
+                ], [], $this->options($createOptions))->getContent();
                 $created[] = (int) $media->getId();
             }
         } catch (\Throwable $e) {

@@ -6,5 +6,5 @@ $translate = $this->plugin('translate');
     <label><input type="radio" name="media_public" value="0"> <?php echo $translate('Private (only logged-in users see them)'); ?></label>
     <label><input type="radio" name="media_public" value="1"> <?php echo $translate('Public'); ?></label>
 </div>
-<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds]); ?>
+<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds, 'renderers' => $renderers ?? []]); ?>
 <p class="bv-muted"><?php echo $translate('Only the media change; the items keep their own visibility.'); ?></p>

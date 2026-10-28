@@ -50,15 +50,23 @@ class SplitPdf extends AbstractMediaOperation
             'first' => 'The first PDF of each item', // @translate
             'last' => 'The last PDF of each item', // @translate
         ];
+        // What other modules do with a new media (text extraction, indexing,
+        // tiles…), on unless unticked (1.1.0). A form without the box: on.
+        $events = ($post['pdf_events'] ?? '1') !== '0';
+        $display = [
+            ['label' => 'PDFs', 'text' => $whichLabels[$which]], // @translate
+            ['label' => 'Resolution', 'text' => $dpi . ' dpi'], // @translate
+        ];
+        if (!$events) {
+            $display[] = ['label' => 'Other modules', 'text' => 'Not told about the page images (faster)']; // @translate
+        }
         return ['params' => [
             'dpi' => $dpi,
             'which' => $which,
             'tool' => $tool,
             'skip_done' => !empty($post['skip_done']),
-            'display' => [
-                ['label' => 'PDFs', 'text' => $whichLabels[$which]], // @translate
-                ['label' => 'Resolution', 'text' => $dpi . ' dpi'], // @translate
-            ],
+            'events' => $events,
+            'display' => $display,
         ], 'errors' => $errors];
     }
 
@@ -92,6 +100,7 @@ class SplitPdf extends AbstractMediaOperation
                 'item_id' => $pdfs[0]['item_id'],
                 'dpi' => (int) ($params['dpi'] ?? 150),
                 'tool' => $params['tool'] ?? 'auto',
+                'events' => !array_key_exists('events', $params) || !empty($params['events']),
             ]]];
         });
     }

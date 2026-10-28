@@ -796,3 +796,13 @@ button.bv-peek-mini:hover { color: #a91919; border-color: #a91919; }
 .bv-run-numbers .bv-run-text a {
     margin-right: .4em;
 }
+
+/* 1.1.0: the second language next to the English, and "?" for the details. */
+.batch-values .bv-second { color: #666; font-weight: normal; font-size: .9em; margin-left: .2em; }
+.batch-values .bv-second::before { content: "· "; }
+.batch-values details.bv-q { display: inline; font-weight: normal; }
+.batch-values details.bv-q > summary { display: inline-block; list-style: none; cursor: pointer; width: 1.3em; height: 1.3em; line-height: 1.3em; text-align: center; border-radius: 50%; background: #e4e4e4; color: #333; font-size: .8em; font-weight: bold; margin-left: .3em; }
+.batch-values details.bv-q > summary::-webkit-details-marker { display: none; }
+.batch-values details.bv-q[open] > summary { background: #3c6e9e; color: #fff; }
+.batch-values details.bv-q .bv-q-text { display: block; margin: .3em 0 .5em; padding: .4em .6em; background: #f6f6f6; border-left: 3px solid #3c6e9e; color: #444; font-size: .9em; max-width: 46em; }
+.batch-values [data-switch-show][hidden], .batch-values [data-switch-hide][hidden] { display: none; }

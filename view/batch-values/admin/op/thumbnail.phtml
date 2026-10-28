@@ -1,8 +1,10 @@
 <?php
 $translate = $this->plugin('translate');
+$bv = $this->plugin('batchValuesRender');
 $escape = $this->plugin('escapeHtml');
 $escapeAttr = $this->plugin('escapeHtmlAttr');
-$isItems = ($resourceType ?? 'items') === 'items';
+$resourceType = $resourceType ?? 'items';
+$isItems = $resourceType === 'items';
 ?>
 <div class="bv-radios bv-mode-choice">
     <strong><?php echo $translate('What to do'); ?></strong>
@@ -19,6 +21,23 @@ $isItems = ($resourceType ?? 'items') === 'items';
     <?php endif; ?>
     <label data-switch-show="thumb_action=remove"><input type="checkbox" name="only_this" value="1"> <?php echo $translate('have the image chosen below as thumbnail (remove only that one)'); ?></label>
 </div>
+<?php if ($resourceType === 'items' || $resourceType === 'media'): ?>
+<div class="bv-radios bv-mode-choice">
+    <strong><?php echo $translate('Primary media'); ?><?php echo $bv->second('Primary media'); ?>
+        <?php echo $this->partial('common/bv-q', ['text' => $translate('The primary media is the one chosen on the item’s page, or else its first media: Omeka makes the item’s image from it. An item without media has none (see “have no media” above).')]); ?></strong>
+    <label><input type="radio" name="only_primary" value="" checked> <?php echo $translate('any'); ?><?php echo $bv->second('any'); ?></label>
+    <label><input type="radio" name="only_primary" value="no_thumb"> <?php echo $translate('has no image of its own (audio, a document…)'); ?><?php echo $bv->second('has no image of its own (audio, a document…)'); ?></label>
+    <label><input type="radio" name="only_primary" value="has_thumb"> <?php echo $translate('has an image of its own'); ?><?php echo $bv->second('has an image of its own'); ?></label>
+    <?php if (!empty($primaryKinds)): ?>
+    <label><input type="radio" name="only_primary" value="kinds"> <?php echo $translate('is of a kind ticked here:'); ?><?php echo $bv->second('is of a kind ticked here:'); ?></label>
+    <div class="bv-checks bv-media-kinds bv-sub-choice" data-switch-show="only_primary=kinds">
+        <?php foreach ($primaryKinds as $kind => $n): ?>
+        <label><input type="checkbox" name="primary_kinds[]" value="<?php echo $escapeAttr($kind); ?>"> <?php echo $escape($kind); ?> <span class="bv-muted">(<?php echo (int) $n; ?>)</span></label>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
 <?php if (!$assets): ?>
     <p class="bv-note"><?php echo sprintf($translate('There is no image yet. Upload one in %s first.'), $this->hyperlink($translate('Assets'), $this->url('admin/default', ['controller' => 'asset']), ['target' => '_blank'])); ?></p>
 <?php else: ?>

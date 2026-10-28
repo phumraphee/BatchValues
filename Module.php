@@ -107,6 +107,7 @@ class Module extends AbstractModule
             'accessionProperty' => (string) $settings->get('batchvalues_accession_property', ''),
             'accessionYears' => (string) $settings->get('batchvalues_accession_placeholder_years', ''),
             'accessionShapes' => (string) $settings->get('batchvalues_accession_shapes', ''),
+            'secondLanguage' => (string) $settings->get('batchvalues_second_language', ''),
         ]);
     }
 
@@ -139,6 +140,7 @@ class Module extends AbstractModule
         $settings->set('batchvalues_accession_property', trim((string) ($post['batchvalues_accession_property'] ?? '')));
         $settings->set('batchvalues_accession_placeholder_years', trim((string) ($post['batchvalues_accession_placeholder_years'] ?? '')));
         $settings->set('batchvalues_accession_shapes', $shapes);
+        $settings->set('batchvalues_second_language', substr(preg_replace('/[^A-Za-z0-9_-]+/', '', (string) ($post['batchvalues_second_language'] ?? '')), 0, 20));
         $confirm = (string) ($post['batchvalues_form_confirm'] ?? 'both');
         $settings->set('batchvalues_form_confirm', in_array($confirm, ['off', 'cancel', 'both'], true) ? $confirm : 'both');
         return true;

@@ -1,7 +1,7 @@
 <?php
 $translate = $this->plugin('translate');
 ?>
-<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds, 'kindsHelp' => $translate('Kinds of media to delete')]); ?>
+<?php echo $this->partial('common/bv-media-kinds', ['kinds' => $kinds, 'renderers' => $renderers ?? [], 'kindsHelp' => $translate('Kinds of media to delete')]); ?>
 <?php if ($extensions): ?>
 <div class="bv-checks bv-media-kinds">
     <strong><?php echo $translate('Or by file extension'); ?></strong>

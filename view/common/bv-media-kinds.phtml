@@ -3,9 +3,11 @@
  * "Only these kinds of media" filter.
  *
  * @var array $kinds media type or ingester => count
+ * @var array $renderers renderer => count (1.1.0)
  * @var string|null $kindsHelp
  */
 $translate = $this->plugin('translate');
+$bv = $this->plugin('batchValuesRender');
 $escape = $this->plugin('escapeHtml');
 $escapeAttr = $this->plugin('escapeHtmlAttr');
 ?>
@@ -18,4 +20,13 @@ $escapeAttr = $this->plugin('escapeHtmlAttr');
     <label><input type="checkbox" name="media_kinds[]" value="<?php echo $escapeAttr($kind); ?>"> <?php echo $escape($kind); ?> <span class="bv-muted">(<?php echo (int) $n; ?>)</span></label>
     <?php endforeach; ?>
 </div>
+<?php if (count($renderers ?? []) > 1): ?>
+<div class="bv-checks bv-media-kinds">
+    <strong><?php echo $translate('Only media shown by (none ticked: all)'); ?><?php echo $bv->second('Only media shown by (none ticked: all)'); ?>
+        <?php echo $this->partial('common/bv-q', ['text' => $translate('The renderer is how Omeka shows a media: “file” for uploaded files, “html”, “youtube”, “oembed”, “iiif”… Ticked with kinds above, a media must fit both.')]); ?></strong>
+    <?php foreach ($renderers as $renderer => $n): ?>
+    <label><input type="checkbox" name="media_renderers[]" value="<?php echo $escapeAttr($renderer); ?>"> <?php echo $escape($renderer); ?> <span class="bv-muted">(<?php echo (int) $n; ?>)</span></label>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
 <?php endif; ?>

@@ -1494,7 +1494,15 @@ class BatchValuesRender extends AbstractHelper
             if (!empty($params['extensions'])) {
                 $parts[] = sprintf($escape($t('the media with the extension %s')), '<strong>.' . $escape(implode(', .', $params['extensions'])) . '</strong>');
             }
-            return $parts ? implode(' ' . $escape($t('and')) . ' ', $parts) : $escape($t('all media'));
+            $which = $parts ? implode(' ' . $escape($t('and')) . ' ', $parts) : '';
+            if (!empty($params['renderers'])) {
+                // Both filters at once: "the media of type X shown by Y".
+                $shown = '<strong>' . $escape(implode(', ', $params['renderers'])) . '</strong>';
+                $which = $which === ''
+                    ? sprintf($escape($t('the media shown by %s')), $shown)
+                    : $which . ' ' . sprintf($escape($t('shown by %s')), $shown);
+            }
+            return $which !== '' ? $which : $escape($t('all media'));
         };
         $target = isset($params['target_label'])
             ? '<strong>' . $escape($t($params['target_label'])) . '</strong>'
@@ -1586,10 +1594,24 @@ class BatchValuesRender extends AbstractHelper
                 return sprintf($t('Join %1$s of %2$s into one value, separated by %3$s'), $values($lines), $prop, $quote(($params['separator'] ?? '') === "\n" ? '↵' : ($params['separator'] ?? '')));
             case 'clean':
                 return sprintf($t('Clean up %1$s: %2$s'), $prop, $textOf('Clean'));
+            case 'html_text':
+                return sprintf($t('In %s, keep only the words of the HTML values, as Text'), $prop);
+            case 'authority':
+                switch ($params['mode'] ?? 'label_missing') {
+                    case 'uri_missing':
+                        return sprintf($t('In %1$s, find the link of %2$s from an authority'), $prop, $values($lines));
+                    case 'label_all':
+                        return sprintf($t('In %1$s, set the label of %2$s to the authority’s name'), $prop, $values($lines));
+                }
+                return sprintf($t('In %1$s, fill the empty labels of %2$s from the authority'), $prop, $values($lines));
             case 'thumbnail':
-                return ($params['mode'] ?? 'set') === 'remove'
+                $sentence = ($params['mode'] ?? 'set') === 'remove'
                     ? sprintf($t('Remove the thumbnail of the %s'), $type)
                     : sprintf($t('Use %1$s as the thumbnail of the %2$s'), $textOf('Thumbnail'), $type);
+                // Which ones, when not all: "Only those with …".
+                $only = !empty($params['primary']) || !empty($params['only_no_thumbnail']) || !empty($params['only_has_thumbnail'])
+                    || !empty($params['only_no_media']) || !empty($params['only_has_media']);
+                return $only ? rtrim($sentence, '.') . ' — ' . $textOf('Where') : $sentence;
             case 'media_order':
                 return sprintf($t('Reorder the media of each item: %s'), $textOf('Order'));
             case 'media_visibility':
@@ -1606,13 +1628,39 @@ class BatchValuesRender extends AbstractHelper
                     ? sprintf($t('Delete %s from the items, with their files'), $mediaWhich($params))
                     : sprintf($t('Delete %s from the items (their files are kept aside)'), $mediaWhich($params));
             case 'split_pdf':
-                return sprintf($t('Make one image per page of each PDF (%d dpi)'), (int) ($params['dpi'] ?? 150));
+                return sprintf($t('Make one image per page of each PDF (%d dpi)'), (int) ($params['dpi'] ?? 150))
+                    . (array_key_exists('events', $params) && empty($params['events']) ? ' · ' . $escape($t('other modules not told')) : '');
             case 'split_item':
                 return $escape($t('Split each item into one item per media'));
             case 'cancel':
                 return $escape($t('Cancel changes'));
         }
         return '';
+    }
+
+    /**
+     * The same words in the second language set in Configure (1.1.0), to
+     * show beside the English: <span lang="th">…</span>, or "" when no
+     * second language is set, it has no translation for these words, or the
+     * page is in that language already. The words come from the module's
+     * translation files (language/<code>.mo).
+     */
+    public function second(string $text): string
+    {
+        static $lang = null;
+        if ($lang === null) {
+            $lang = preg_replace('/[^A-Za-z0-9_-]+/', '', (string) $this->services->get('Omeka\Settings')->get('batchvalues_second_language', ''));
+        }
+        if ($lang === '') {
+            return '';
+        }
+        $translator = $this->services->get('MvcTranslator');
+        $other = (string) $translator->translate($text, 'default', $lang);
+        if ($other === $text || $other === (string) $translator->translate($text)) {
+            return '';
+        }
+        $view = $this->getView();
+        return ' <span class="bv-second" lang="' . $view->escapeHtmlAttr(str_replace('_', '-', $lang)) . '">' . $view->escapeHtml($other) . '</span>';
     }
 
     public function outcomeLabel(string $outcome): string
@@ -1635,6 +1683,9 @@ class BatchValuesRender extends AbstractHelper
             'skipped_no_media' => 'Skipped: no media concerned', // @translate
             'skipped_has_thumbnail' => 'Skipped: has a thumbnail already', // @translate
             'skipped_has_media' => 'Skipped: has media', // @translate
+            'skipped_primary' => 'Skipped: its primary media does not fit', // @translate
+            'skipped_not_found' => 'Skipped: the authority has nothing for it', // @translate
+            'skipped_not_asked' => 'Skipped: the authority was not asked (run it again)', // @translate
             'skipped_last_media' => 'Skipped: it would be left without media', // @translate
             'skipped_irreversible' => 'Not cancelled: cannot be undone', // @translate
             'failed' => 'Failed', // @translate

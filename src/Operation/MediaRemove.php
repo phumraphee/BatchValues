@@ -53,27 +53,28 @@ class MediaRemove extends AbstractMediaOperation
             }
         }
         arsort($extensions);
-        return ['kinds' => $this->mediaKinds($ctx['ids'], $ctx), 'extensions' => $extensions, 'keepsFiles' => $this->keepsFiles()];
+        return ['kinds' => $this->mediaKinds($ctx['ids'], $ctx), 'renderers' => $this->mediaRenderers($ctx['ids'], $ctx), 'extensions' => $extensions, 'keepsFiles' => $this->keepsFiles()];
     }
 
     public function parse(array $post, array $ctx): array
     {
         $params = [
             'kinds' => $this->parseKinds($post),
+            'renderers' => $this->parseRenderers($post),
             'extensions' => array_values(array_filter(array_map('strtolower', array_map('strval', (array) ($post['media_extensions'] ?? []))), 'strlen')),
             'keep_one' => !empty($post['keep_one']),
             // Recorded so the log says which way this run was done (0.7.2).
             'keep_files' => $this->keepsFiles(),
         ];
         $errors = [];
-        if (!$params['kinds'] && !$params['extensions']) {
-            $errors[] = $this->translate('Tick the kinds or the extensions of media to delete.');
+        if (!$params['kinds'] && !$params['extensions'] && !$params['renderers']) {
+            $errors[] = $this->translate('Tick the kinds, the extensions or the renderers of media to delete.');
         }
         if (empty($post['confirm_delete'])) {
             $errors[] = $this->translate('Tick the box that says you understand the files are deleted for good.');
         }
         $params['display'] = [];
-        if ($params['kinds']) {
+        if ($params['kinds'] || $params['renderers']) {
             $params['display'][] = $this->kindsDisplay($params);
         }
         if ($params['extensions']) {
@@ -95,7 +96,10 @@ class MediaRemove extends AbstractMediaOperation
             foreach ($rows as $row) {
                 $byKind = $params['kinds'] && in_array(self::kindOf($row), $params['kinds'], true);
                 $byExtension = !empty($params['extensions']) && in_array(strtolower((string) $row['extension']), $params['extensions'], true);
-                if ($byKind || $byExtension) {
+                // Renderers (1.1.0) narrow the kinds and extensions ticked, or
+                // alone choose the media.
+                $chosen = $params['kinds'] || !empty($params['extensions']) ? ($byKind || $byExtension) : !empty($params['renderers']);
+                if ($chosen && $this->rendererMatches($row, $params)) {
                     // Everything needed to put it back: its details, its own
                     // values and where it was in the item (0.7.2).
                     $values = [];

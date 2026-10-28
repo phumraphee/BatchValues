@@ -1,0 +1,9 @@
+<?php
+/**
+ * A "?" that opens the details of a choice (1.1.0): short words on the page,
+ * the rest one click away.
+ *
+ * @var string $text
+ */
+?>
+<details class="bv-q"><summary title="<?php echo $this->escapeHtmlAttr($this->translate('More')); ?>">?</summary><span class="bv-q-text"><?php echo $this->escapeHtml($text); ?></span></details>

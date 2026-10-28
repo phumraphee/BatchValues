@@ -36,6 +36,7 @@ return [
             Stdlib\Processor::class => Service\StdlibFactory::class,
             Stdlib\MediaTools::class => Service\StdlibFactory::class,
             Stdlib\Operations::class => Service\StdlibFactory::class,
+            Stdlib\Authority::class => Service\StdlibFactory::class,
         ],
     ],
     'router' => [

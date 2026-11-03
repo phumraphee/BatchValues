@@ -280,6 +280,9 @@ SQL,
             // the log (0.11.0).
             $sharedEventManager->attach($adapter, 'api.update.pre', [$this, 'logFormEditPre'], -100);
             $sharedEventManager->attach($adapter, 'api.update.post', [$this, 'logFormEditPost'], -100);
+            // A save of this module that asks Inverse Properties for the other side of its links
+            // (1.1.1): the linked records read their values again first (before its listener).
+            $sharedEventManager->attach($adapter, 'api.update.post', [$this, 'readLinkedAgain'], 10);
         }
 
         // The ingester used to make page images from PDFs is not offered in
@@ -583,6 +586,38 @@ SQL,
         // Keep these keys away from anything else that reads the content.
         unset($content['batchvalues_remove'], $content['batchvalues_modify'], $content['batchvalues_restore'], $content['batchvalues_media_fields']);
         $request->setContent($content);
+    }
+
+    /**
+     * Before Inverse Properties looks whether a linked record already links back, the records a
+     * save of this module links to read their values again from the database (1.1.1).
+     *
+     * That module looks at each linked record's values as Doctrine holds them in memory, and the
+     * link back it makes is not added to that list. A run can save one item more than once (one
+     * entry per value added), and the second look then missed the first link back and made it
+     * again: two links back for one link. Only for this module's own saves that ask for the links
+     * back; a list with unsaved changes in it is left alone.
+     */
+    public function readLinkedAgain(Event $event)
+    {
+        $request = $event->getParam('request');
+        if (!$request || !$request->getOption('batchvalues') || !$request->getValue('inverse_properties_set_inverses', false)) {
+            return;
+        }
+        $resource = $event->getParam('response') ? $event->getParam('response')->getContent() : null;
+        if (!$resource instanceof \Omeka\Entity\Resource) {
+            return;
+        }
+        foreach ($resource->getValues() as $value) {
+            $target = $value->getValueResource();
+            if (!$target) {
+                continue;
+            }
+            $list = $target->getValues();
+            if ($list instanceof \Doctrine\ORM\PersistentCollection && $list->isInitialized() && !$list->isDirty()) {
+                $list->setInitialized(false);
+            }
+        }
     }
 
     /**

@@ -826,6 +826,11 @@ class Processor
 
     protected function update(int $id, array $content, string $collectionAction): void
     {
+        /* Inverse Properties keeps the other side of a link (an item's "Related item", say)
+           only for a save that asks it to, as Omeka's own item form does with a hidden
+           field. A run that adds or changes a link asks too, so it leaves the archive as the
+           form would. Without that module the key means nothing and changes nothing. */
+        $content['inverse_properties_set_inverses'] = 1;
         $this->services->get('Omeka\ApiManager')->update($this->planner->getResourceType(), $id, $content, [], [
             'isPartial' => true,
             'collectionAction' => $collectionAction,

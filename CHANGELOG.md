@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.1
+
+- A run that adds or changes a link now asks the Inverse Properties module to keep the other side
+  of it, as Omeka's own item form does (`inverse_properties_set_inverses`). Before, a link added by
+  a run (to "Related item", say) had no link back until somebody saved the item in the form. Without
+  that module installed nothing changes.
+- And before that module looks, the records linked read their values again: a run that saves one
+  item twice (one entry per value added) made the link back twice, since the module looks at what
+  Doctrine holds in memory.
+
 ## 1.1.0
 
 What the Bulk Edit module (3.4.40) does and Batch Values did not, so Bulk Edit can be turned off.

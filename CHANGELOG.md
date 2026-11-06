@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2 — 2026-11-06
+
+- The edit form no longer looks for the save question of an older module that Revision History
+  replaced; Revision History's own question is used as before. No database change.
+
 ## 1.1.1
 
 - A run that adds or changes a link now asks the Inverse Properties module to keep the other side

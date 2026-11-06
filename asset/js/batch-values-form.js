@@ -371,12 +371,11 @@
      * Each such module is known by the settings it puts on the page and by
      * the mark its script sets on the form it watches. Both are needed: with
      * the settings but without the mark, its script did not run, and this
-     * module asks itself rather than nobody asking (1.0.1). The first entry is
-     * Revision History; the second, the older module it replaced.
+     * module asks itself rather than nobody asking (1.0.1). The one entry is
+     * Revision History.
      */
     var OTHERS = [
         { global: 'RevisionHistoryConfirm', mark: 'data-rh-confirm' },
-        { global: 'TchConfirm', mark: 'data-tch-confirm' },
     ];
     window.batchValuesOtherConfirms = OTHERS;
     var othersAsk = function () {

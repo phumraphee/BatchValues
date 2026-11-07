@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3 — 2026-11-07
+
+- "Change template or class" offers only the templates of the kind of resource being changed (those used
+  mostly on items, item sets or media, and those not used yet), and refuses one used for another kind: a
+  media template was offered for items. No database change.
+
 ## 1.1.2 — 2026-11-06
 
 - The edit form no longer looks for the save question of an older module that Revision History

@@ -69,7 +69,7 @@ class ConvertValues extends AbstractOperation
         if ($target !== 'template' && !$dataTypes->has($target)) {
             $errors[] = $this->translate('Choose the data type to change to.');
         }
-        $lookup = (string) ($post['lookup'] ?? 'dcterms:identifier');
+        $lookup = (string) ($post['lookup'] ?? 'o:title');
         $params = self::pickerParams($picker) + [
             'target' => $target,
             'link_text' => (in_array($post['link_text'] ?? 'label_or_uri', ['label_or_uri', 'label', 'uri', 'label_uri', 'uri_label'], true) ? ($post['link_text'] ?? 'label_or_uri') : 'label_or_uri'),
@@ -348,7 +348,7 @@ class ConvertValues extends AbstractOperation
         }
         $classes = self::RESOURCE_TYPES[$target];
         $connection = $this->services->get('Omeka\Connection');
-        $lookup = $params['lookup'] ?? 'dcterms:identifier';
+        $lookup = $params['lookup'] ?? 'o:title';
         if ($lookup === 'o:id') {
             if (!ctype_digit($text)) {
                 return null;

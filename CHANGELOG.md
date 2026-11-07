@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.4 — 2026-11-07
+
+- "Convert" finds a linked resource by its title unless another field is chosen (it was dcterms:identifier,
+  which a site that does not use Dublin Core does not fill).
+
 ## 1.1.3 — 2026-11-07
 
 - "Change template or class" offers only the templates of the kind of resource being changed (those used

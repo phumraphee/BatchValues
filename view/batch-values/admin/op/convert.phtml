@@ -43,8 +43,8 @@ $core = ['literal', 'uri', 'resource:item', 'resource:itemset', 'resource:media'
     <div class="bv-inline-choice">
         <label><strong><?php echo $translate('To a linked item, item set or media: find it by'); ?></strong>
             <select name="lookup">
-                <option value="dcterms:identifier">dcterms:identifier</option>
                 <option value="o:title"><?php echo $translate('its title'); ?></option>
+                <option value="dcterms:identifier">dcterms:identifier</option>
                 <option value="o:id"><?php echo $translate('its Omeka id (number)'); ?></option>
                 <?php foreach (($propertyOptions['template'] ?? []) as $opt): ?><?php if ($opt['term'] !== 'dcterms:identifier'): ?><option value="<?php echo $escapeAttr($opt['term']); ?>"><?php echo $escape($opt['label'] . ' — ' . $opt['term']); ?></option><?php endif; ?><?php endforeach; ?>
             </select></label>

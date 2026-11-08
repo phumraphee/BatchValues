@@ -50,6 +50,7 @@ class ItemSets extends AbstractResourceOperation
 
     public function plan(array $ids, array $params, array $ctx): array
     {
-        return $this->planLinks($ids, 'item_sets', 'item_item_set', 'item_set_id', $params['add'] ?? [], $params['remove'] ?? []);
+        $plan = $this->planLinks($ids, 'item_sets', 'item_item_set', 'item_set_id', $params['add'] ?? [], $params['remove'] ?? []);
+        return \BatchValues\Stdlib\Notes::apply($this->name(), $params, $plan);
     }
 }

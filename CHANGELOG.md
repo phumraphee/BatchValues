@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.5 — 2026-11-08
+
+- Other modules can add a note to a preview (`BatchValues\Stdlib\Notes::add`): one sentence per resource, shown on
+  the preview and the run's page; a note never stops a change. "Add to or remove from item sets" asks for them.
+
 ## 1.1.4 — 2026-11-07
 
 - "Convert" finds a linked resource by its title unless another field is chosen (it was dcterms:identifier,

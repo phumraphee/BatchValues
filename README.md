@@ -166,7 +166,8 @@ per resource; `outcome` is `added`, `removed`, `changed`, or `skipped_*` / `fail
 
 ## Who may use it
 
-Editor, site admin and global admin. The API checks each resource's permissions again.
+Reviewer (1.1.6), editor, site admin and global admin — the roles Omeka lets batch edit all. The API checks each
+resource's permissions again (a reviewer deletes only their own media).
 
 ## Licence
 

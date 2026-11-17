@@ -73,10 +73,11 @@ class Module extends AbstractModule
     {
         parent::onBootstrap($event);
         $acl = $this->getServiceLocator()->get('Omeka\Acl');
-        // Same roles that may batch edit items in core. Each item update is
-        // still authorized individually by the API.
+        // Same roles that may batch edit all items in core (1.1.6: reviewer too, as
+        // Omeka's own batch edit allows it). Each item update is still authorized
+        // individually by the API, so a reviewer's Remove media still deletes only their own.
         $acl->allow(
-            ['editor', 'site_admin', 'global_admin'],
+            ['reviewer', 'editor', 'site_admin', 'global_admin'],
             Controller\Admin\IndexController::class
         );
     }

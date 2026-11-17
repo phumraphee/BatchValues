@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.6 — 2026-11-17
+
+- Reviewers may use Batch Values, as Omeka's own batch edit lets them ("batch-edit-all"). Every change is still
+  checked by the API resource by resource: a reviewer cannot delete media or change the owner of resources that are
+  not theirs. No database change.
+
 ## 1.1.5 — 2026-11-08
 
 - Other modules can add a note to a preview (`BatchValues\Stdlib\Notes::add`): one sentence per resource, shown on
